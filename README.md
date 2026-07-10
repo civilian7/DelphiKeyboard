@@ -142,11 +142,6 @@ dcc32.exe VirtualKeyboardDemo.dpr -U"C:\Program Files (x86)\Embarcadero\Studio\3
 ## 출처 (원저작자)
 
 `legacy\` 의 구 구현은 C++Builder 소스를 Delphi 로 포팅한 것입니다.
-소스 주석에 저작자 이름은 없고 개인 연락처 메모만 남아 있으나
-(개인정보라 문서에는 옮기지 않음), 구현 기법(마우스 훅 + `keybd_event` 키 주입 +
-IME 조합, Shift/KEYUP 처리)과 키오스크용 가상 키보드라는 개발 배경이
-볼랜드포럼의 **박영목(선한목자)** 님 글
-"[[참고] 가상키보드 구현....](http://www.borlandforum.com/impboard/impboard.dll?action=read&db=bcb_qna&no=9776)"
-(2001-08-10, C++빌더 Q&A)과 정확히 일치하여 해당 글(또는 그 계열의 공유 소스)이
-원본으로 추정됩니다. 현재의 `src\` 구현(조합 오토마타·벡터 렌더링)은 키 배치 좌표
-테이블 외에는 전면 재작성되었습니다.
+소스에 저작자 이름은 남아 있지 않아 원저작자는 확인되지 않았습니다.
+현재의 `src\` 구현(조합 오토마타·벡터 렌더링)은 키 배치 좌표 테이블 외에는
+전면 재작성되었습니다.
