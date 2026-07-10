@@ -9,6 +9,10 @@
     <PlatformTarget>x64</PlatformTarget>
     <AssemblyName>VKeyboardDemo</AssemblyName>
     <RootNamespace>VKeyboardDemo</RootNamespace>
+    <!-- 실행 파일 출력 위치를 저장소 공용 bin\ 으로 통일 -->
+    <OutputPath>..\..\bin\</OutputPath>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
   </PropertyGroup>
 
   <ItemGroup>

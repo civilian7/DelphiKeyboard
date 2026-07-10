@@ -21,7 +21,7 @@ DelphiKeyboard\
             csharp\                  C# 사용 예제 (net8.0 콘솔, P/Invoke)
             python\                  Python 사용 예제 (ctypes)
             c\                       C/C++ 사용 예제 (LoadLibrary, MSVC/MinGW)
-  bin\      빌드 산출물 (VirtualKeyboardDemo.exe)
+  bin\      빌드 산출물 — 모든 언어 데모의 실행 파일 출력 위치 (공용)
   doc\      HangulComposition.md     한글 조합 문제 원인 분석·오토마타 설계·검증
             DllGuide.md              DLL 사용 가이드 (C ABI — 언어별 예제)
             screenshot.png           키보드 화면 캡처
@@ -146,7 +146,8 @@ if (VKB_Show(buffer, buffer.Capacity, 1, -1, -1, 0, 0, "가상 키보드", '\0')
 }
 ```
 
-실행: `cd demos\csharp && dotnet run` (net8.0, x64 — 빌드 시 DLL 이 출력 폴더로 자동 복사됨)
+실행: `cd demos\csharp && dotnet run` (net8.0, x64).
+빌드 출력은 공용 `bin\` 으로 나가며 `sc_vkeyboard.dll` 도 함께 복사됩니다.
 
 ### Python 예제 (`demos\python\`)
 
@@ -167,8 +168,8 @@ if vkb.VKB_Show(buffer, 1024, 1, -1, -1, 0, 0, "가상 키보드", ord("\0")) ==
 `LoadLibrary`/`GetProcAddress` 방식이라 임포트 라이브러리가 필요 없습니다.
 
 ```
-cl /W4 vkeyboard_demo.c                              (MSVC)
-gcc -Wall -municode vkeyboard_demo.c -o demo.exe     (MinGW)
+cl /W4 vkeyboard_demo.c /Fe:..\..\bin\vkeyboard_demo_c.exe               (MSVC)
+gcc -Wall -municode vkeyboard_demo.c -o ..\..\bin\vkeyboard_demo_c.exe   (MinGW)
 ```
 
 ### 델파이에서 DLL 사용 (`demos\delphi_dll\`)

@@ -1,8 +1,8 @@
 ﻿// sc_vkeyboard.dll C/C++ 사용 예제 (LoadLibrary / GetProcAddress — 임포트 라이브러리 불필요)
 // 가상 키보드를 모달로 띄워 한글/영문을 입력받는다 (시스템 IME 상태와 무관하게 한글 조합).
 //
-// 빌드 (MSVC):  cl /W4 vkeyboard_demo.c
-// 빌드 (MinGW): gcc -Wall -municode vkeyboard_demo.c -o vkeyboard_demo.exe
+// 빌드 (MSVC):  cl /W4 vkeyboard_demo.c /Fe:..\..\bin\vkeyboard_demo_c.exe
+// 빌드 (MinGW): gcc -Wall -municode vkeyboard_demo.c -o ..\..\bin\vkeyboard_demo_c.exe
 // 실행 파일 옆(또는 PATH)에 sc_vkeyboard.dll 필요 (64비트: lib\dll\, 32비트: lib\dll\win32\)
 #include <windows.h>
 #include <stdio.h>
