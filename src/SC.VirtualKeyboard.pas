@@ -537,9 +537,10 @@ begin
 end;
 
 // 입력 표시 상자를 그린다: 확정 텍스트 + 조합 중 글자(반전) + 캐럿 + 전체 지움(✕) 버튼
+// 상자는 같은 행의 키들과 같은 세로 위치·높이(13~61)로 정렬된다
 procedure TSCVirtualKeyboardForm.DrawInput;
 begin
-  FInputRect := TRect.Create(ScaleX(100), ScaleY(16), ScaleX(564), ScaleY(60));
+  FInputRect := TRect.Create(ScaleX(100), ScaleY(13), ScaleX(564), ScaleY(61));
 
   // 상자 배경·테두리
   Canvas.Brush.Style := bsSolid;
