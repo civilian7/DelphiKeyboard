@@ -14,6 +14,9 @@ uses
   System.UITypes,
   Winapi.Windows,
   Winapi.Messages,
+  Winapi.MMSystem,
+  Winapi.ShellAPI,
+  Winapi.Dwmapi,
   Vcl.Graphics,
   Vcl.Controls,
   Vcl.Forms,
@@ -45,6 +48,7 @@ type
   private
     FBackgroundColor: TColor;
     FBorderColor: TColor;
+    FClickSound: Boolean;
     FCustomLeft: Integer;
     FCustomTop: Integer;
     FHeight: Integer;
@@ -57,8 +61,6 @@ type
     FPressedColor: TColor;
     FSpecialKeyColor: TColor;
     FSubTextColor: TColor;
-    FTitle: string;
-    FTitleTextColor: TColor;
     FToggledColor: TColor;
     FWidth: Integer;
   public
@@ -85,6 +87,9 @@ type
     property BackgroundColor: TColor read FBackgroundColor write FBackgroundColor;
     /// <summary>키 테두리 색상.</summary>
     property BorderColor: TColor read FBorderColor write FBorderColor;
+    /// <summary>키를 클릭할 때 클릭음을 재생할지 여부 (기본 False).
+    /// 클릭음은 내부에서 합성한 짧은 사운드로, 별도 리소스나 파일이 필요 없습니다.</summary>
+    property ClickSound: Boolean read FClickSound write FClickSound;
     /// <summary>Position 이 kpCustom 일 때 사용할 창 좌측 좌표 (화면 픽셀 기준).</summary>
     property CustomLeft: Integer read FCustomLeft write FCustomLeft;
     /// <summary>Position 이 kpCustom 일 때 사용할 창 상단 좌표 (화면 픽셀 기준).</summary>
@@ -110,10 +115,6 @@ type
     property SpecialKeyColor: TColor read FSpecialKeyColor write FSpecialKeyColor;
     /// <summary>Shift 보조 글자(키 상단 작은 글자) 색상.</summary>
     property SubTextColor: TColor read FSubTextColor write FSubTextColor;
-    /// <summary>키보드 창 좌측 상단에 표시할 제목.</summary>
-    property Title: string read FTitle write FTitle;
-    /// <summary>제목 글자 색상.</summary>
-    property TitleTextColor: TColor read FTitleTextColor write FTitleTextColor;
     /// <summary>토글 활성(Shift/Caps/한영 켜짐) 키 면 색상.</summary>
     property ToggledColor: TColor read FToggledColor write FToggledColor;
     /// <summary>키보드 폭 (96DPI 기준 논리값, 기본 800). 실제 픽셀 크기는 모니터 DPI 에 따라 추가 스케일됩니다.</summary>
@@ -130,13 +131,17 @@ implementation
 const
   KEY_NUMS = 66;
 
-  // 96DPI 기준 폼 논리 크기 (기본값·스케일 기준)
+  // 96DPI 기준 폼 논리 크기 (기본값·스케일 기준). 하단 32px 는 크레딧 표시 영역
   FORM_W = 800;
-  FORM_H = 378;
+  FORM_H = 396;
 
   // 96DPI 기준 최소 논리 크기 (이보다 작으면 키를 조작할 수 없어 보정)
   MIN_FORM_W = 400;
-  MIN_FORM_H = 189;
+  MIN_FORM_H = 198;
+
+  // 우하단 크레딧 (클릭 시 저장소로 이동)
+  CREDIT_TEXT = '@시골프로그래머';
+  CREDIT_URL  = 'https://github.com/civilian7/DelphiKeyboard';
 
   // 기본 색상 팔레트
   COLOR_FORM_BG    = TColor($00EEF0F2);   // 폼 배경 (밝은 웜그레이)
@@ -147,8 +152,7 @@ const
   COLOR_KEY_DOWN   = TColor($00E0C9A8);   // 눌림
   COLOR_KEY_ON     = TColor($00A8D8F8);   // 토글 활성 (Shift/Caps/한영)
   COLOR_KEY_TEXT   = TColor($00303030);   // 키 글자
-  COLOR_KEY_SUB    = TColor($00909498);   // Shift 보조 글자
-  COLOR_TITLE_TEXT = TColor($00707478);   // 제목
+  COLOR_KEY_SUB    = TColor($00909498);   // Shift 보조 글자·크레딧
 
 type
   // 컴포넌트 → 키보드 폼 색상 전달용
@@ -161,7 +165,6 @@ type
     Pressed: TColor;
     SpecialKey: TColor;
     SubText: TColor;
-    TitleText: TColor;
     Toggled: TColor;
   end;
   TSCVKeyKind = (
@@ -282,10 +285,13 @@ type
   TSCVirtualKeyboardForm = class(TForm)
   private
     FCapsLock: Boolean;
+    FClickSound: Boolean;
     FColors: TSCKeyboardColors;
     FComposer: THangulComposer;
     FComposeStart: Integer;
     FComposing: string;
+    FCreditHot: Boolean;
+    FCreditRect: TRect;
     FEdit: TEdit;
     FHotIndex: Integer;
     FKorean: Boolean;
@@ -293,7 +299,7 @@ type
     FLogicalWidth: Integer;
     FPressedIndex: Integer;
     FShift: Boolean;
-    FTitle: string;
+    procedure ApplyRoundedCorners;
     procedure CMMouseLeave(var Msg: TMessage); message CM_MOUSELEAVE;
     procedure CommitComposition;
     procedure DrawKey(AIndex: Integer);
@@ -315,19 +321,65 @@ type
     procedure SetEditText(const AValue: string);
   protected
     procedure ChangeScale(M, D: Integer; isDpiChange: Boolean); override;
+    procedure CreateWnd; override;
     procedure DoShow; override;
     procedure MouseDown(Button: TMouseButton; Shift: TShiftState; X, Y: Integer); override;
     procedure MouseMove(Shift: TShiftState; X, Y: Integer); override;
     procedure MouseUp(Button: TMouseButton; Shift: TShiftState; X, Y: Integer); override;
     procedure Paint; override;
+    procedure Resize; override;
   public
     constructor Create(const ALogicalWidth, ALogicalHeight: Integer); reintroduce;
     destructor Destroy; override;
+    property ClickSound: Boolean read FClickSound write FClickSound;
     property Colors: TSCKeyboardColors read FColors write SetColors;
     property EditText: string read GetEditText write SetEditText;
     property Korean: Boolean read FKorean write FKorean;
-    property Title: string read FTitle write FTitle;
   end;
+
+var
+  // 합성된 클릭음 WAV (프로세스 수명 동안 유지 — SND_ASYNC 재생 중 해제 방지)
+  GClickWav: TBytes;
+
+// 짧은 클릭음을 메모리에서 합성해 비동기 재생한다 (리소스·파일 불필요)
+procedure PlayClickSound;
+const
+  SAMPLE_RATE = 44100;                              // 샘플레이트 (Hz)
+  CLICK_MS = 28;                                    // 클릭음 길이 (밀리초)
+  DATA_OFFSET = 44;                                 // WAV 헤더 크기
+begin
+  if Length(GClickWav) = 0 then
+  begin
+    var LSampleCount := SAMPLE_RATE * CLICK_MS div 1000;
+    var LDataSize := LSampleCount * SizeOf(SmallInt);
+    SetLength(GClickWav, DATA_OFFSET + LDataSize);
+
+    // RIFF/WAVE 헤더 (PCM 16비트 모노)
+    PCardinal(@GClickWav[0])^ := $46464952;                       // 'RIFF'
+    PCardinal(@GClickWav[4])^ := DATA_OFFSET - 8 + LDataSize;     // 파일 크기 - 8
+    PCardinal(@GClickWav[8])^ := $45564157;                       // 'WAVE'
+    PCardinal(@GClickWav[12])^ := $20746D66;                      // 'fmt '
+    PCardinal(@GClickWav[16])^ := 16;                             // fmt 청크 크기
+    PWord(@GClickWav[20])^ := 1;                                  // PCM
+    PWord(@GClickWav[22])^ := 1;                                  // 모노
+    PCardinal(@GClickWav[24])^ := SAMPLE_RATE;
+    PCardinal(@GClickWav[28])^ := SAMPLE_RATE * SizeOf(SmallInt); // 초당 바이트
+    PWord(@GClickWav[32])^ := SizeOf(SmallInt);                   // 블록 정렬
+    PWord(@GClickWav[34])^ := 16;                                 // 샘플 비트수
+    PCardinal(@GClickWav[36])^ := $61746164;                      // 'data'
+    PCardinal(@GClickWav[40])^ := LDataSize;
+
+    // 급감쇠 사인파 — 기계식 키 클릭과 유사한 톤
+    for var I := 0 to LSampleCount - 1 do
+    begin
+      var LTime := I / SAMPLE_RATE;
+      var LSample := Round(32767 * 0.32 * Sin(2 * Pi * 1750 * LTime) * Exp(-LTime / 0.005));
+      PSmallInt(@GClickWav[DATA_OFFSET + I * SizeOf(SmallInt)])^ := SmallInt(LSample);
+    end;
+  end;
+
+  PlaySound(PChar(@GClickWav[0]), 0, SND_MEMORY or SND_ASYNC or SND_NODEFAULT);
+end;
 
 {$REGION 'TSCVirtualKeyboardForm'}
 
@@ -346,7 +398,6 @@ begin
   FColors.Pressed := COLOR_KEY_DOWN;
   FColors.SpecialKey := COLOR_KEY_SPEC;
   FColors.SubText := COLOR_KEY_SUB;
-  FColors.TitleText := COLOR_TITLE_TEXT;
   FColors.Toggled := COLOR_KEY_ON;
 
   FComposer := THangulComposer.Create;
@@ -381,6 +432,30 @@ begin
   inherited Destroy;
 end;
 
+// 테두리 없는 폼에 둥근 모서리를 적용한다
+procedure TSCVirtualKeyboardForm.ApplyRoundedCorners;
+const
+  DWMWA_WINDOW_CORNER_PREFERENCE = 33;   // Windows 11 (Dwmapi 헤더 미정의 대비 자체 선언)
+  DWMWCP_ROUND = 2;
+begin
+  if not HandleAllocated then
+  begin
+    Exit;
+  end;
+
+  // Windows 11: DWM 이 안티앨리어싱된 둥근 모서리를 그려준다
+  var LPreference: Cardinal := DWMWCP_ROUND;
+  if Succeeded(DwmSetWindowAttribute(Handle, DWMWA_WINDOW_CORNER_PREFERENCE,
+    @LPreference, SizeOf(LPreference))) then
+  begin
+    Exit;
+  end;
+
+  // Windows 10 이하: 윈도우 영역으로 폴백 (SetWindowRgn 에 넘긴 리전은 OS 가 소유하므로 해제 금지)
+  var LDiameter := ScaleMin(16);
+  SetWindowRgn(Handle, CreateRoundRectRgn(0, 0, Width + 1, Height + 1, LDiameter, LDiameter), True);
+end;
+
 procedure TSCVirtualKeyboardForm.ChangeScale(M, D: Integer; isDpiChange: Boolean);
 begin
   inherited ChangeScale(M, D, isDpiChange);
@@ -393,9 +468,11 @@ procedure TSCVirtualKeyboardForm.CMMouseLeave(var Msg: TMessage);
 begin
   inherited;
 
-  if FHotIndex <> -1 then
+  if (FHotIndex <> -1) or FCreditHot then
   begin
     FHotIndex := -1;
+    FCreditHot := False;
+    Cursor := crDefault;
     Invalidate;
   end;
 end;
@@ -406,6 +483,13 @@ begin
   FComposer.Reset;
   FComposing := '';
   FComposeStart := -1;
+end;
+
+procedure TSCVirtualKeyboardForm.CreateWnd;
+begin
+  inherited CreateWnd;
+
+  ApplyRoundedCorners;
 end;
 
 procedure TSCVirtualKeyboardForm.DoShow;
@@ -691,6 +775,13 @@ begin
     Exit;
   end;
 
+  // 우하단 크레딧 클릭 → 저장소 페이지 열기
+  if FCreditRect.Contains(Point(X, Y)) then
+  begin
+    ShellExecute(0, 'open', CREDIT_URL, nil, nil, SW_SHOWNORMAL);
+    Exit;
+  end;
+
   var LIndex := KeyAtPos(X, Y);
   if LIndex >= 0 then
   begin
@@ -700,7 +791,7 @@ begin
   end
   else
   begin
-    // 키 밖(제목 영역 등)을 잡으면 창 이동
+    // 키 밖(여백 영역)을 잡으면 창 이동
     ReleaseCapture;
     Perform(WM_SYSCOMMAND, SC_MOVE or HTCAPTION, 0);
   end;
@@ -711,9 +802,20 @@ begin
   inherited MouseMove(Shift, X, Y);
 
   var LIndex := KeyAtPos(X, Y);
-  if LIndex <> FHotIndex then
+  var LCreditHot := FCreditRect.Contains(Point(X, Y));
+  if (LIndex <> FHotIndex) or (LCreditHot <> FCreditHot) then
   begin
     FHotIndex := LIndex;
+    FCreditHot := LCreditHot;
+    if FCreditHot then
+    begin
+      Cursor := crHandPoint;
+    end
+    else
+    begin
+      Cursor := crDefault;
+    end;
+
     Invalidate;
   end;
 end;
@@ -733,15 +835,6 @@ procedure TSCVirtualKeyboardForm.Paint;
 begin
   inherited Paint;
 
-  // 제목
-  Canvas.Brush.Style := bsClear;
-  Canvas.Font.Name := 'Segoe UI';
-  Canvas.Font.Color := FColors.TitleText;
-  Canvas.Font.Height := -ScaleMin(13);
-  Canvas.Font.Style := [fsBold];
-  Canvas.TextOut(ScaleX(14), ScaleY(9), FTitle);
-  Canvas.Font.Style := [];
-
   // 입력창 테두리
   Canvas.Brush.Style := bsSolid;
   Canvas.Brush.Color := clWhite;
@@ -753,10 +846,36 @@ begin
   begin
     DrawKey(I);
   end;
+
+  // 우하단 크레딧 (클릭 시 저장소로 이동, 호버 시 밑줄)
+  Canvas.Brush.Style := bsClear;
+  Canvas.Font.Name := 'Segoe UI';
+  Canvas.Font.Color := FColors.SubText;
+  Canvas.Font.Height := -ScaleMin(12);
+  if FCreditHot then
+  begin
+    Canvas.Font.Style := [fsUnderline];
+  end
+  else
+  begin
+    Canvas.Font.Style := [];
+  end;
+
+  var LCreditSize := Canvas.TextExtent(CREDIT_TEXT);
+  var LCreditLeft := ClientWidth - ScaleX(14) - LCreditSize.cx;
+  var LCreditTop := ScaleY(364) + (ClientHeight - ScaleY(364) - LCreditSize.cy) div 2;
+  FCreditRect := TRect.Create(LCreditLeft, LCreditTop, LCreditLeft + LCreditSize.cx, LCreditTop + LCreditSize.cy);
+  Canvas.TextOut(LCreditLeft, LCreditTop, CREDIT_TEXT);
+  Canvas.Font.Style := [];
 end;
 
 procedure TSCVirtualKeyboardForm.PressKey(AIndex: Integer);
 begin
+  if FClickSound then
+  begin
+    PlayClickSound;
+  end;
+
   case KEY_KINDS[AIndex] of
     vkkChar:
       begin
@@ -835,6 +954,14 @@ begin
   end;
 end;
 
+procedure TSCVirtualKeyboardForm.Resize;
+begin
+  inherited Resize;
+
+  // DPI 변경 등으로 창 크기가 바뀌면 둥근 모서리 영역을 다시 적용
+  ApplyRoundedCorners;
+end;
+
 // 폰트·radius 등 왜곡되면 안 되는 값은 두 축 중 작은 배율을 따른다
 function TSCVirtualKeyboardForm.ScaleMin(AValue: Integer): Integer;
 begin
@@ -875,6 +1002,7 @@ begin
 
   FBackgroundColor := COLOR_FORM_BG;
   FBorderColor := COLOR_KEY_BORDER;
+  FClickSound := False;
   FHeight := FORM_H;
   FHotColor := COLOR_KEY_HOT;
   FKeyColor := COLOR_KEY_FACE;
@@ -885,8 +1013,6 @@ begin
   FPressedColor := COLOR_KEY_DOWN;
   FSpecialKeyColor := COLOR_KEY_SPEC;
   FSubTextColor := COLOR_KEY_SUB;
-  FTitle := '가상 키보드';
-  FTitleTextColor := COLOR_TITLE_TEXT;
   FToggledColor := COLOR_KEY_ON;
   FWidth := FORM_W;
 end;
@@ -925,14 +1051,13 @@ begin
   LColors.Pressed := FPressedColor;
   LColors.SpecialKey := FSpecialKeyColor;
   LColors.SubText := FSubTextColor;
-  LColors.TitleText := FTitleTextColor;
   LColors.Toggled := FToggledColor;
 
   var LForm := TSCVirtualKeyboardForm.Create(LWidth, LHeight);
   try
+    LForm.ClickSound := FClickSound;
     LForm.Colors := LColors;
     LForm.Korean := FLanguage = klKorean;
-    LForm.Title := FTitle;
     LForm.EditText := AText;
     if FPasswordChar <> #0 then
     begin

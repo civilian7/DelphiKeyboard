@@ -21,9 +21,11 @@ typedef int(__stdcall *PVKB_Show)(
     int bufferSize,         // 버퍼 용량 (문자 수, 널 종단 포함)
     int language,           // 0=영문, 1=한글
     int left, int top,      // 둘 다 -1 이면 화면 중앙 (화면 픽셀)
-    int width, int height,  // 96DPI 기준 논리값, 0 이하 = 기본 800×378
-    const wchar_t *title,   // NULL = 기본 제목
+    int width, int height,  // 96DPI 기준 논리값, 0 이하 = 기본 800×396
+    const wchar_t *title,   // 예약 인자 (무시됨, ABI 호환용) — NULL 권장
     wchar_t passwordChar);  // L'\0' = 일반 표시
+
+typedef void(__stdcall *PVKB_SetClickSound)(int enabled);   // 키 클릭음 (0=끔 기본, v1.1+)
 
 typedef int(__stdcall *PVKB_Version)(void);
 
@@ -50,12 +52,19 @@ int wmain(void)
     int version = vkbVersion();
     wprintf(L"sc_vkeyboard.dll v%d.%d\n", version >> 8, version & 0xFF);
 
+    // 키 클릭음 켬 (v1.1+ — 구버전 DLL 은 export 가 없을 수 있으므로 NULL 확인)
+    PVKB_SetClickSound vkbSetClickSound = (PVKB_SetClickSound)GetProcAddress(lib, "VKB_SetClickSound");
+    if (vkbSetClickSound != NULL)
+    {
+        vkbSetClickSound(1);
+    }
+
     wchar_t buffer[1024] = L"안녕하세요";
     int ret = vkbShow(buffer, 1024,
                       VKB_LANG_KOREAN,
                       -1, -1,     // 화면 중앙
-                      0, 0,       // 기본 크기 (800×378)
-                      L"가상 키보드 (C 데모)",
+                      0, 0,       // 기본 크기 (800×396)
+                      NULL,       // 예약 인자 (무시됨)
                       L'\0');     // 일반 표시
 
     switch (ret)

@@ -25,6 +25,8 @@ def main() -> None:
     version = vkb.VKB_Version()
     print(f"sc_vkeyboard.dll v{version >> 8}.{version & 0xFF}")
 
+    vkb.VKB_SetClickSound(1)  # 키 클릭음 켬 (v1.1+)
+
     # 입출력 버퍼: 호출 시 초기 텍스트, 확정 시 입력 결과
     buffer = ctypes.create_unicode_buffer("안녕하세요", 1024)
 
@@ -32,8 +34,8 @@ def main() -> None:
         buffer, 1024,
         VKB_LANG_KOREAN,
         -1, -1,          # 화면 중앙
-        0, 0,            # 기본 크기 (800×378)
-        "가상 키보드 (Python 데모)",
+        0, 0,            # 기본 크기 (800×396)
+        None,            # 예약 인자 (무시됨)
         ord("\0"),       # 일반 표시
     )
 

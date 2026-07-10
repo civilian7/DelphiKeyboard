@@ -14,6 +14,9 @@ begin
     var LVersion := VKB_Version;
     Writeln(Format('sc_vkeyboard.dll v%d.%d', [LVersion shr 8, LVersion and $FF]));
 
+    // 키 클릭음 켬 (v1.1+)
+    VKB_SetClickSound(1);
+
     // 입출력 버퍼: 호출 시 초기 텍스트, 확정 시 입력 결과
     var LBuffer: array[0..1023] of WideChar;
     StrPLCopy(@LBuffer[0], '안녕하세요', High(LBuffer));
@@ -21,8 +24,8 @@ begin
     var LRet := VKB_Show(@LBuffer[0], Length(LBuffer),
       VKB_LANG_KOREAN,
       -1, -1,          // 화면 중앙
-      0, 0,            // 기본 크기 (800×378)
-      '가상 키보드 (델파이 DLL 데모)',
+      0, 0,            // 기본 크기 (800×396)
+      nil,             // 예약 인자 (무시됨)
       #0);             // 일반 표시
 
     case LRet of

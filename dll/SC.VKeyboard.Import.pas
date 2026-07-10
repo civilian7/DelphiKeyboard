@@ -23,13 +23,17 @@ const
 /// <param name="ALeft">창 좌측 좌표 (화면 픽셀). ALeft/ATop 모두 -1 이면 화면 중앙</param>
 /// <param name="ATop">창 상단 좌표 (화면 픽셀)</param>
 /// <param name="AWidth">키보드 폭 (96DPI 기준 논리값). 0 이하면 기본 800</param>
-/// <param name="AHeight">키보드 높이 (96DPI 기준 논리값). 0 이하면 기본 378</param>
-/// <param name="ATitle">창 제목. nil 이면 기본 제목</param>
+/// <param name="AHeight">키보드 높이 (96DPI 기준 논리값). 0 이하면 기본 396</param>
+/// <param name="ATitle">예약 인자 (무시됨). 제목 표시가 제거되어 사용하지 않지만 ABI 호환을 위해 유지. nil 권장</param>
 /// <param name="APasswordChar">암호 표시 문자. #0 이면 일반 표시</param>
 /// <returns>VKB_CONFIRMED / VKB_CANCELLED / VKB_ERROR</returns>
 function VKB_Show(ABuffer: PWideChar; ABufferSize: Integer;
   ALanguage, ALeft, ATop, AWidth, AHeight: Integer;
   ATitle: PWideChar; APasswordChar: WideChar): Integer; stdcall;
+
+/// <summary>키 클릭음 재생 여부를 설정합니다. 이후의 VKB_Show 호출부터 적용됩니다.</summary>
+/// <param name="AEnabled">0=끔(기본), 그 외=켬</param>
+procedure VKB_SetClickSound(AEnabled: Integer); stdcall;
 
 /// <summary>DLL 버전을 반환합니다 (상위 바이트 = 메이저, 하위 바이트 = 마이너).</summary>
 function VKB_Version: Integer; stdcall;
@@ -37,6 +41,7 @@ function VKB_Version: Integer; stdcall;
 implementation
 
 function VKB_Show; external SC_VKEYBOARD_DLL;
+procedure VKB_SetClickSound; external SC_VKEYBOARD_DLL;
 function VKB_Version; external SC_VKEYBOARD_DLL;
 
 end.

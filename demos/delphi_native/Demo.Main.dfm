@@ -86,4 +86,14 @@
     Height = 21
     TabOrder = 0
   end
+  object ChkClickSound: TCheckBox
+    Left = 184
+    Top = 112
+    Width = 121
+    Height = 17
+    Caption = #53364#47533' '#49324#50868#46300
+    Checked = True
+    State = cbChecked
+    TabOrder = 1
+  end
 end

@@ -37,13 +37,20 @@ int __stdcall VKB_Show(
     int      left,          // 창 좌측 (화면 픽셀). left/top 모두 -1 = 화면 중앙
     int      top,           // 창 상단 (화면 픽셀)
     int      width,         // 키보드 폭 (96DPI 논리값). 0 이하 = 기본 800
-    int      height,        // 키보드 높이 (96DPI 논리값). 0 이하 = 기본 378
-    const wchar_t* title,   // 창 제목. NULL = 기본 제목
+    int      height,        // 키보드 높이 (96DPI 논리값). 0 이하 = 기본 396
+    const wchar_t* title,   // 예약 인자 (무시됨, ABI 호환용 유지). NULL 권장
     wchar_t  passwordChar); // 암호 표시 문자. L'\0' = 일반 표시
 
-// DLL 버전. 상위 바이트 = 메이저, 하위 바이트 = 마이너 (0x0100 = v1.0)
+// 키 클릭음 재생 여부 설정 (0=끔 기본, 그 외=켬). 이후의 VKB_Show 호출부터 적용.
+// 클릭음은 DLL 내부에서 합성하므로 별도 사운드 파일이 필요 없다. (v1.1+)
+void __stdcall VKB_SetClickSound(int enabled);
+
+// DLL 버전. 상위 바이트 = 메이저, 하위 바이트 = 마이너 (0x0101 = v1.1)
 int __stdcall VKB_Version(void);
 ```
+
+> v1.1 변경: 키보드 창의 제목 표시가 제거되어 `title` 은 예약 인자가 되었습니다
+> (기존 호출 코드는 수정 없이 동작). `VKB_SetClickSound` 가 추가되었습니다.
 
 ## 언어별 예제
 
@@ -61,7 +68,7 @@ int main(void)
     PVKB_Show VKB_Show = (PVKB_Show)GetProcAddress(lib, "VKB_Show");
 
     wchar_t buffer[1024] = L"안녕하세요";
-    if (VKB_Show(buffer, 1024, 1, -1, -1, 0, 0, L"가상 키보드 (C)", L'\0') == 1)
+    if (VKB_Show(buffer, 1024, 1, -1, -1, 0, 0, NULL, L'\0') == 1)
     {
         wprintf(L"입력 결과: %s\n", buffer);
     }
@@ -83,7 +90,7 @@ static extern int VKB_Show(StringBuilder buffer, int bufferSize,
     string? title, char passwordChar);
 
 var buffer = new StringBuilder("안녕하세요", 1024);
-if (VKB_Show(buffer, buffer.Capacity, 1, -1, -1, 0, 0, "가상 키보드", '\0') == 1)
+if (VKB_Show(buffer, buffer.Capacity, 1, -1, -1, 0, 0, null, '\0') == 1)
 {
     Console.WriteLine($"입력 결과: {buffer}");
 }
@@ -97,7 +104,7 @@ import ctypes
 vkb = ctypes.WinDLL("sc_vkeyboard.dll")   # WinDLL = stdcall (x86 에서 중요)
 
 buffer = ctypes.create_unicode_buffer("안녕하세요", 1024)
-ret = vkb.VKB_Show(buffer, 1024, 1, -1, -1, 0, 0, "가상 키보드 (Python)", ord("\0"))
+ret = vkb.VKB_Show(buffer, 1024, 1, -1, -1, 0, 0, None, ord("\0"))
 
 if ret == 1:
     print("입력 결과:", buffer.value)
@@ -113,7 +120,7 @@ var LBuffer: array[0..1023] of WideChar;
 StrPLCopy(@LBuffer[0], '안녕하세요', High(LBuffer));
 
 if VKB_Show(@LBuffer[0], Length(LBuffer), VKB_LANG_KOREAN,
-  -1, -1, 0, 0, '가상 키보드', #0) = VKB_CONFIRMED then
+  -1, -1, 0, 0, nil, #0) = VKB_CONFIRMED then
 begin
   ShowMessage(PWideChar(@LBuffer[0]));
 end;

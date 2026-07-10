@@ -21,6 +21,7 @@ type
   TfrmMain = class(TForm)
     Edit1: TEdit;
     BtnKeyboard: TSpeedButton;
+    ChkClickSound: TCheckBox;
     procedure BtnKeyboardClick(Sender: TObject);
   private
     { Private declarations }
@@ -45,6 +46,7 @@ begin
   var LText: string := Edit1.Text;
 
   // 싱글톤 사용 (생성/해제 불필요). TSCVirtualKeyboard.Create 로 직접 생성해서 써도 된다
+  TSCVirtualKeyboard.Instance.ClickSound := ChkClickSound.Checked;
   if TSCVirtualKeyboard.Instance.Execute(LText) then
   begin
     Edit1.Text := LText;
