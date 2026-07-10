@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <!-- sc_vkeyboard.dll(64비트)과 비트수를 맞춘다. 32비트로 빌드하려면 x86 + lib\dll\win32 사용 -->
+    <PlatformTarget>x64</PlatformTarget>
+    <AssemblyName>VKeyboardDemo</AssemblyName>
+    <RootNamespace>VKeyboardDemo</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- 빌드 출력 폴더로 네이티브 DLL 복사 -->
+    <None Include="..\..\lib\dll\sc_vkeyboard.dll" CopyToOutputDirectory="PreserveNewest" Link="sc_vkeyboard.dll" />
+  </ItemGroup>
+
+</Project>

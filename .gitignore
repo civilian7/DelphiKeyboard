@@ -6,6 +6,9 @@ bin/
 *.drc
 *.rsm
 
+# .NET 빌드 산출물
+obj/
+
 # Delphi IDE 임시 파일
 __history/
 __recovery/

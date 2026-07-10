@@ -13,10 +13,15 @@
 DelphiKeyboard\
   src\      SC.Hangul.pas            두벌식 조합 오토마타 (THangulComposer) — UI 무관, 단독 재사용 가능
             SC.VirtualKeyboard.pas   TSCVirtualKeyboard 컴포넌트 + 키보드 폼 (벡터 렌더링, DPI 스케일)
-  demos\    VirtualKeyboardDemo.dpr  데모 애플리케이션
-            Demo.Main.pas(.dfm)      데모 메인 폼 (frmMain)
+  dll\      sc_vkeyboard.dpr         네이티브 DLL 프로젝트 (stdcall exports)
+            SC.VKeyboard.Import.pas  DLL 사용 델파이 프로젝트용 임포트 래퍼
+  lib\dll\  sc_vkeyboard.dll         64비트 DLL (32비트는 lib\dll\win32\ — 동일 파일명)
+  demos\    delphi_native\           델파이 데모 — 소스(src\) 직접 사용 (VirtualKeyboardDemo.dpr)
+            delphi_dll\              델파이 데모 — DLL 임포트 사용 (VKeyboardDllDemo.dpr)
+            csharp\                  C# 사용 예제 (net8.0 콘솔)
   bin\      빌드 산출물 (VirtualKeyboardDemo.exe)
   doc\      HangulComposition.md     한글 조합 문제 원인 분석·오토마타 설계·검증
+            DllGuide.md              DLL 사용 가이드 (C ABI — 언어별 예제)
             screenshot.png           키보드 화면 캡처
   legacy\   구 IME 의존 구현 (uKeyboard.pas 등) — 참고용 보존, 프로젝트에서 제외됨
 ```
@@ -100,23 +105,80 @@ TSCVirtualKeyboard.Instance.KeyTextColor := $00E0E0E0;
 - **Enter** 확정 / **ESC** 취소, 키 밖 영역 드래그로 창 이동
 - 물리 키보드로도 입력 가능 (물리 입력 시 조합 중 글자는 자동 확정)
 
+## 네이티브 DLL (다른 언어에서 사용)
+
+C#, C/C++, Python 등 C ABI(FFI)를 지원하는 언어에서는 `sc_vkeyboard.dll` 로 가상 키보드를
+사용합니다. 32/64비트 모두 **동일 파일명**이며 폴더로 구분합니다
+(64비트 `lib\dll\`, 32비트 `lib\dll\win32\`).
+
+> Delphi 는 상용 라이선스가 필요하므로 **미리 빌드된 DLL 을 저장소에 포함해 배포**합니다 —
+> Delphi 없이 DLL 만으로 사용할 수 있습니다. 언어별 상세 사용법(C/C++, C#, Python,
+> Delphi, 일반 FFI 지침)은 **[doc/DllGuide.md](doc/DllGuide.md)** 참고.
+
+### Exports (stdcall)
+
+```c
+// 1=Enter 확정, 0=ESC 취소, -1=오류. buffer 는 널 종단 유니코드 입출력 버퍼(1024자 권장)
+int VKB_Show(wchar_t* buffer, int bufferSize,
+             int language,          // 0=영문, 1=한글
+             int left, int top,     // 둘 다 -1 이면 화면 중앙 (화면 픽셀)
+             int width, int height, // 96DPI 기준 논리값, 0 이하 = 기본 800×378
+             const wchar_t* title,  // NULL = 기본 제목
+             wchar_t passwordChar); // L'\0' = 일반 표시
+
+int VKB_Version(); // 상위 바이트 = 메이저, 하위 바이트 = 마이너
+```
+
+### C# 예제 (`demos\csharp\`)
+
+```csharp
+[DllImport("sc_vkeyboard.dll", CharSet = CharSet.Unicode)]
+static extern int VKB_Show(StringBuilder buffer, int bufferSize,
+    int language, int left, int top, int width, int height,
+    string? title, char passwordChar);
+
+var buffer = new StringBuilder("안녕하세요", 1024);
+if (VKB_Show(buffer, buffer.Capacity, 1, -1, -1, 0, 0, "가상 키보드", '\0') == 1)
+{
+    Console.WriteLine($"입력 결과: {buffer}");
+}
+```
+
+실행: `cd demos\csharp && dotnet run` (net8.0, x64 — 빌드 시 DLL 이 출력 폴더로 자동 복사됨)
+
+### 델파이에서 DLL 사용 (`demos\delphi_dll\`)
+
+소스(`src\`) 대신 DLL 을 쓰려면 `dll\SC.VKeyboard.Import.pas` 를 uses 에 추가하고
+`VKB_Show` 를 호출하면 됩니다 (DLL 이름 상수는 32/64 공통, IFDEF 불필요).
+콘솔 예제 `demos\delphi_dll\VKeyboardDllDemo.dpr` 참고 — 실행 파일 옆에
+`sc_vkeyboard.dll` 이 있어야 합니다.
+
+### DLL 빌드
+
+```
+cd dll
+dcc64.exe sc_vkeyboard.dpr -U"...\lib\win64\release" -E..\lib\dll -N..\lib\dll
+dcc32.exe sc_vkeyboard.dpr -U"...\lib\win32\release" -E..\lib\dll\win32 -N..\lib\dll\win32
+```
+
 ## 빌드
 
 Win64 가 기본 타깃입니다. 산출물은 폴더로 비트수를 구분합니다 (64비트 `bin\`, 32비트 `bin\win32\`).
 
 ```
-cd demos
+cd demos\delphi_native
 
 :: Win64 (기본)
-dcc64.exe VirtualKeyboardDemo.dpr -U"C:\Program Files (x86)\Embarcadero\Studio\37.0\lib\win64\release" -E..\bin -N..\bin
+dcc64.exe VirtualKeyboardDemo.dpr -U"C:\Program Files (x86)\Embarcadero\Studio\37.0\lib\win64\release" -E..\..\bin -N..\..\bin
 
 :: Win32 (필요 시)
-dcc32.exe VirtualKeyboardDemo.dpr -U"C:\Program Files (x86)\Embarcadero\Studio\37.0\lib\win32\release" -E..\bin\win32 -N..\bin\win32
+dcc32.exe VirtualKeyboardDemo.dpr -U"C:\Program Files (x86)\Embarcadero\Studio\37.0\lib\win32\release" -E..\..\bin\win32 -N..\..\bin\win32
 ```
 
-또는 Delphi IDE 에서 `demos\VirtualKeyboardDemo.dpr` 을 열어 빌드
+또는 Delphi IDE 에서 `demos\delphi_native\VirtualKeyboardDemo.dpr` 을 열어 빌드
 (32비트는 Project Manager 에서 Windows 32-bit 플랫폼 추가).
 소스는 비트수 무관 공통이라 IFDEF 분기가 없습니다.
+DLL 임포트 데모(`demos\delphi_dll\VKeyboardDllDemo.dpr`)도 같은 방식으로 빌드합니다.
 
 > High-DPI: 키 배치·글꼴은 96DPI 기준 논리값을 `CurrentPPI` 로 스케일합니다.
 > 프로젝트 옵션에서 DPI awareness 를 **PerMonitorV2** 로 설정하세요.
@@ -138,6 +200,10 @@ dcc32.exe VirtualKeyboardDemo.dpr -U"C:\Program Files (x86)\Embarcadero\Studio\3
 - **색상 커스터마이징**: 배경·키·글자·테두리·상태(오버/눌림/토글) 등 색상 10종 프로퍼티화
 - **폴더 재구성**: `src\` / `demos\` / `bin\`(+`win32\`) / `doc\` / `legacy\`,
   데모를 `Project1` → `VirtualKeyboardDemo` 로 변경
+- **네이티브 DLL**: `sc_vkeyboard.dll` (32/64비트, stdcall `VKB_Show`/`VKB_Version`) 과
+  델파이 임포트 래퍼 추가. 미리 빌드된 DLL 을 `lib\dll\` 에 포함해 배포 (Delphi 불필요)
+- **다국어 샘플·가이드**: 데모를 `delphi_native\`(소스 사용) / `delphi_dll\`(DLL 사용) /
+  `csharp\` 로 분리, C ABI 사용 가이드(`doc\DllGuide.md`) 추가
 
 ## 라이선스
 
