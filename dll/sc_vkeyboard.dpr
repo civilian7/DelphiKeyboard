@@ -26,7 +26,7 @@ var
 /// <param name="ALeft">창 좌측 좌표 (화면 픽셀). ALeft/ATop 모두 -1 이면 화면 중앙</param>
 /// <param name="ATop">창 상단 좌표 (화면 픽셀)</param>
 /// <param name="AWidth">키보드 폭 (96DPI 기준 논리값). 0 이하면 기본 800</param>
-/// <param name="AHeight">키보드 높이 (96DPI 기준 논리값). 0 이하면 기본 396</param>
+/// <param name="AHeight">키보드 높이 (96DPI 기준 논리값). 0 이하면 기본 376</param>
 /// <param name="ATitle">예약 인자 (무시됨). 키보드 창의 제목 표시가 제거되어 더 이상 사용하지 않지만
 /// ABI 호환을 위해 유지합니다. nil 전달 권장</param>
 /// <param name="APasswordChar">암호 표시 문자. #0 이면 일반 표시</param>

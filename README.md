@@ -70,15 +70,15 @@ TSCVirtualKeyboard.Instance.Position := kpMainFormCenter;
 // 지정 좌표 (화면 픽셀 기준, 모니터 작업 영역을 벗어나면 자동 보정)
 TSCVirtualKeyboard.Instance.SetCustomPosition(100, 400);
 
-// 크기: 프로퍼티(96DPI 기준 논리값, 기본 800×396)로 지정하거나
+// 크기: 프로퍼티(96DPI 기준 논리값, 기본 800×376)로 지정하거나
 TSCVirtualKeyboard.Instance.Width := 1200;
-TSCVirtualKeyboard.Instance.Height := 594;
+TSCVirtualKeyboard.Instance.Height := 564;
 
 // Execute 파라미터로 그때그때 지정 (0 이하 = 프로퍼티 값 사용)
-TSCVirtualKeyboard.Instance.Execute(LText, 1200, 594);
+TSCVirtualKeyboard.Instance.Execute(LText, 1200, 564);
 ```
 
-크기를 바꾸면 키 배치·글꼴이 전부 비례 스케일됩니다 (최소 400×198 보정,
+크기를 바꾸면 키 배치·글꼴이 전부 비례 스케일됩니다 (최소 400×188 보정,
 모니터 DPI 배율은 추가로 적용).
 
 ### 색상 지정
@@ -97,7 +97,7 @@ TSCVirtualKeyboard.Instance.KeyTextColor := $00E0E0E0;
 | `PasswordChar` | 입력창 암호 표시 문자 (`#0` = 일반 표시) |
 | `Position` | 표시 위치 (`kpScreenCenter` 기본 / `kpMainFormCenter` / `kpCustom`) |
 | `CustomLeft` / `CustomTop` | `kpCustom` 일 때 창 좌표 (화면 픽셀 기준) |
-| `Width` / `Height` | 키보드 크기 (96DPI 기준 논리값, 기본 800×396) |
+| `Width` / `Height` | 키보드 크기 (96DPI 기준 논리값, 기본 800×376) |
 | `ClickSound` | 키 클릭음 재생 여부 (기본 `False`). 클릭음은 내부 합성 — 리소스 불필요 |
 | `BackgroundColor` | 폼 배경 색상 |
 | `KeyColor` / `SpecialKeyColor` | 일반 키 / 특수 키 면 색상 |
@@ -132,7 +132,7 @@ C#, C/C++, Python 등 C ABI(FFI)를 지원하는 언어에서는 `sc_vkeyboard.d
 int VKB_Show(wchar_t* buffer, int bufferSize,
              int language,          // 0=영문, 1=한글
              int left, int top,     // 둘 다 -1 이면 화면 중앙 (화면 픽셀)
-             int width, int height, // 96DPI 기준 논리값, 0 이하 = 기본 800×396
+             int width, int height, // 96DPI 기준 논리값, 0 이하 = 기본 800×376
              const wchar_t* title,  // 예약 인자 (무시됨, ABI 호환용) — NULL 권장
              wchar_t passwordChar); // L'\0' = 일반 표시
 

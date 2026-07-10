@@ -24,7 +24,7 @@ begin
     var LRet := VKB_Show(@LBuffer[0], Length(LBuffer),
       VKB_LANG_KOREAN,
       -1, -1,          // 화면 중앙
-      0, 0,            // 기본 크기 (800×396)
+      0, 0,            // 기본 크기 (800×376)
       nil,             // 예약 인자 (무시됨)
       #0);             // 일반 표시
 

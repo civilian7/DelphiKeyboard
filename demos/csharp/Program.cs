@@ -21,7 +21,7 @@ internal static class VirtualKeyboard
     /// <param name="left">창 좌측 좌표 (화면 픽셀). left/top 모두 -1 이면 화면 중앙</param>
     /// <param name="top">창 상단 좌표 (화면 픽셀)</param>
     /// <param name="width">키보드 폭 (96DPI 기준 논리값). 0 이하면 기본 800</param>
-    /// <param name="height">키보드 높이 (96DPI 기준 논리값). 0 이하면 기본 396</param>
+    /// <param name="height">키보드 높이 (96DPI 기준 논리값). 0 이하면 기본 376</param>
     /// <param name="title">예약 인자 (무시됨, ABI 호환용). null 권장</param>
     /// <param name="passwordChar">암호 표시 문자. '\0' 이면 일반 표시</param>
     [DllImport("sc_vkeyboard.dll", CharSet = CharSet.Unicode)]
@@ -55,7 +55,7 @@ internal static class Program
             buffer, buffer.Capacity,
             VirtualKeyboard.LangKorean,
             left: -1, top: -1,        // 화면 중앙
-            width: 0, height: 0,      // 기본 크기 (800×396)
+            width: 0, height: 0,      // 기본 크기 (800×376)
             title: null,              // 예약 인자 (무시됨)
             passwordChar: '\0');
 

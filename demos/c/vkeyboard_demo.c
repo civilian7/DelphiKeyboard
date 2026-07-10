@@ -21,7 +21,7 @@ typedef int(__stdcall *PVKB_Show)(
     int bufferSize,         // 버퍼 용량 (문자 수, 널 종단 포함)
     int language,           // 0=영문, 1=한글
     int left, int top,      // 둘 다 -1 이면 화면 중앙 (화면 픽셀)
-    int width, int height,  // 96DPI 기준 논리값, 0 이하 = 기본 800×396
+    int width, int height,  // 96DPI 기준 논리값, 0 이하 = 기본 800×376
     const wchar_t *title,   // 예약 인자 (무시됨, ABI 호환용) — NULL 권장
     wchar_t passwordChar);  // L'\0' = 일반 표시
 
@@ -63,7 +63,7 @@ int wmain(void)
     int ret = vkbShow(buffer, 1024,
                       VKB_LANG_KOREAN,
                       -1, -1,     // 화면 중앙
-                      0, 0,       // 기본 크기 (800×396)
+                      0, 0,       // 기본 크기 (800×376)
                       NULL,       // 예약 인자 (무시됨)
                       L'\0');     // 일반 표시
 

@@ -133,11 +133,11 @@ const
 
   // 96DPI 기준 폼 논리 크기 (기본값·스케일 기준). 하단 32px 는 크레딧 표시 영역
   FORM_W = 800;
-  FORM_H = 396;
+  FORM_H = 376;
 
   // 96DPI 기준 최소 논리 크기 (이보다 작으면 키를 조작할 수 없어 보정)
   MIN_FORM_W = 400;
-  MIN_FORM_H = 198;
+  MIN_FORM_H = 188;
 
   // 우하단 크레딧 (클릭 시 저장소로 이동)
   CREDIT_TEXT = '@시골프로그래머';
@@ -196,45 +196,45 @@ type
 
 const
   KEY_RECTS: array[0..KEY_NUMS - 1] of TSCVKeyRect = (
-    (Left: 12;  Top: 33;  Width: 74;  Height: 48), (Left: 578; Top: 33;  Width: 48;  Height: 48),
-    (Left: 632; Top: 33;  Width: 48;  Height: 48), (Left: 686; Top: 33;  Width: 48;  Height: 48),
-    (Left: 740; Top: 33;  Width: 48;  Height: 48),
+    (Left: 12;  Top: 13; Width: 74;  Height: 48), (Left: 578; Top: 13; Width: 48;  Height: 48),
+    (Left: 632; Top: 13; Width: 48;  Height: 48), (Left: 686; Top: 13; Width: 48;  Height: 48),
+    (Left: 740; Top: 13; Width: 48;  Height: 48),
 
-    (Left: 12;  Top: 95;  Width: 48;  Height: 48), (Left: 66;  Top: 95;  Width: 48;  Height: 48),
-    (Left: 120; Top: 95;  Width: 48;  Height: 48), (Left: 174; Top: 95;  Width: 48;  Height: 48),
-    (Left: 228; Top: 95;  Width: 48;  Height: 48), (Left: 282; Top: 95;  Width: 48;  Height: 48),
-    (Left: 336; Top: 95;  Width: 48;  Height: 48), (Left: 390; Top: 95;  Width: 48;  Height: 48),
-    (Left: 444; Top: 95;  Width: 48;  Height: 48), (Left: 498; Top: 95;  Width: 48;  Height: 48),
-    (Left: 552; Top: 95;  Width: 48;  Height: 48), (Left: 606; Top: 95;  Width: 48;  Height: 48),
-    (Left: 660; Top: 95;  Width: 48;  Height: 48), (Left: 714; Top: 95;  Width: 74;  Height: 48),
+    (Left: 12;  Top: 75; Width: 48;  Height: 48), (Left: 66;  Top: 75; Width: 48;  Height: 48),
+    (Left: 120; Top: 75; Width: 48;  Height: 48), (Left: 174; Top: 75; Width: 48;  Height: 48),
+    (Left: 228; Top: 75; Width: 48;  Height: 48), (Left: 282; Top: 75; Width: 48;  Height: 48),
+    (Left: 336; Top: 75; Width: 48;  Height: 48), (Left: 390; Top: 75; Width: 48;  Height: 48),
+    (Left: 444; Top: 75; Width: 48;  Height: 48), (Left: 498; Top: 75; Width: 48;  Height: 48),
+    (Left: 552; Top: 75; Width: 48;  Height: 48), (Left: 606; Top: 75; Width: 48;  Height: 48),
+    (Left: 660; Top: 75; Width: 48;  Height: 48), (Left: 714; Top: 75; Width: 74;  Height: 48),
 
-    (Left: 12;  Top: 150; Width: 74;  Height: 48), (Left: 92;  Top: 150; Width: 48;  Height: 48),
-    (Left: 146; Top: 150; Width: 48;  Height: 48), (Left: 200; Top: 150; Width: 48;  Height: 48),
-    (Left: 254; Top: 150; Width: 48;  Height: 48), (Left: 308; Top: 150; Width: 48;  Height: 48),
-    (Left: 362; Top: 150; Width: 48;  Height: 48), (Left: 416; Top: 150; Width: 48;  Height: 48),
-    (Left: 470; Top: 150; Width: 48;  Height: 48), (Left: 524; Top: 150; Width: 48;  Height: 48),
-    (Left: 578; Top: 150; Width: 48;  Height: 48), (Left: 632; Top: 150; Width: 48;  Height: 48),
-    (Left: 686; Top: 150; Width: 48;  Height: 48), (Left: 740; Top: 150; Width: 48;  Height: 48),
+    (Left: 12;  Top: 130; Width: 74;  Height: 48), (Left: 92;  Top: 130; Width: 48;  Height: 48),
+    (Left: 146; Top: 130; Width: 48;  Height: 48), (Left: 200; Top: 130; Width: 48;  Height: 48),
+    (Left: 254; Top: 130; Width: 48;  Height: 48), (Left: 308; Top: 130; Width: 48;  Height: 48),
+    (Left: 362; Top: 130; Width: 48;  Height: 48), (Left: 416; Top: 130; Width: 48;  Height: 48),
+    (Left: 470; Top: 130; Width: 48;  Height: 48), (Left: 524; Top: 130; Width: 48;  Height: 48),
+    (Left: 578; Top: 130; Width: 48;  Height: 48), (Left: 632; Top: 130; Width: 48;  Height: 48),
+    (Left: 686; Top: 130; Width: 48;  Height: 48), (Left: 740; Top: 130; Width: 48;  Height: 48),
 
-    (Left: 12;  Top: 205; Width: 88;  Height: 48), (Left: 106; Top: 205; Width: 48;  Height: 48),
-    (Left: 160; Top: 205; Width: 48;  Height: 48), (Left: 214; Top: 205; Width: 48;  Height: 48),
-    (Left: 268; Top: 205; Width: 48;  Height: 48), (Left: 322; Top: 205; Width: 48;  Height: 48),
-    (Left: 376; Top: 205; Width: 48;  Height: 48), (Left: 430; Top: 205; Width: 48;  Height: 48),
-    (Left: 484; Top: 205; Width: 48;  Height: 48), (Left: 538; Top: 205; Width: 48;  Height: 48),
-    (Left: 592; Top: 205; Width: 48;  Height: 48), (Left: 646; Top: 205; Width: 48;  Height: 48),
-    (Left: 701; Top: 205; Width: 87;  Height: 48),
+    (Left: 12;  Top: 185; Width: 88;  Height: 48), (Left: 106; Top: 185; Width: 48;  Height: 48),
+    (Left: 160; Top: 185; Width: 48;  Height: 48), (Left: 214; Top: 185; Width: 48;  Height: 48),
+    (Left: 268; Top: 185; Width: 48;  Height: 48), (Left: 322; Top: 185; Width: 48;  Height: 48),
+    (Left: 376; Top: 185; Width: 48;  Height: 48), (Left: 430; Top: 185; Width: 48;  Height: 48),
+    (Left: 484; Top: 185; Width: 48;  Height: 48), (Left: 538; Top: 185; Width: 48;  Height: 48),
+    (Left: 592; Top: 185; Width: 48;  Height: 48), (Left: 646; Top: 185; Width: 48;  Height: 48),
+    (Left: 701; Top: 185; Width: 87;  Height: 48),
 
-    (Left: 12;  Top: 260; Width: 115; Height: 48), (Left: 133; Top: 260; Width: 48;  Height: 48),
-    (Left: 187; Top: 260; Width: 48;  Height: 48), (Left: 241; Top: 260; Width: 48;  Height: 48),
-    (Left: 295; Top: 260; Width: 48;  Height: 48), (Left: 349; Top: 260; Width: 48;  Height: 48),
-    (Left: 403; Top: 260; Width: 48;  Height: 48), (Left: 457; Top: 260; Width: 48;  Height: 48),
-    (Left: 511; Top: 260; Width: 48;  Height: 48), (Left: 565; Top: 260; Width: 48;  Height: 48),
-    (Left: 619; Top: 260; Width: 48;  Height: 48), (Left: 686; Top: 260; Width: 48;  Height: 48),
+    (Left: 12;  Top: 240; Width: 115; Height: 48), (Left: 133; Top: 240; Width: 48;  Height: 48),
+    (Left: 187; Top: 240; Width: 48;  Height: 48), (Left: 241; Top: 240; Width: 48;  Height: 48),
+    (Left: 295; Top: 240; Width: 48;  Height: 48), (Left: 349; Top: 240; Width: 48;  Height: 48),
+    (Left: 403; Top: 240; Width: 48;  Height: 48), (Left: 457; Top: 240; Width: 48;  Height: 48),
+    (Left: 511; Top: 240; Width: 48;  Height: 48), (Left: 565; Top: 240; Width: 48;  Height: 48),
+    (Left: 619; Top: 240; Width: 48;  Height: 48), (Left: 686; Top: 240; Width: 48;  Height: 48),
 
-    (Left: 12;  Top: 316; Width: 74;  Height: 48), (Left: 92;  Top: 316; Width: 74;  Height: 48),
-    (Left: 176; Top: 316; Width: 282; Height: 48), (Left: 468; Top: 316; Width: 74;  Height: 48),
-    (Left: 548; Top: 316; Width: 74;  Height: 48), (Left: 632; Top: 316; Width: 48;  Height: 48),
-    (Left: 686; Top: 316; Width: 48;  Height: 48), (Left: 740; Top: 316; Width: 48;  Height: 48)
+    (Left: 12;  Top: 296; Width: 74;  Height: 48), (Left: 92;  Top: 296; Width: 74;  Height: 48),
+    (Left: 176; Top: 296; Width: 282; Height: 48), (Left: 468; Top: 296; Width: 74;  Height: 48),
+    (Left: 548; Top: 296; Width: 74;  Height: 48), (Left: 632; Top: 296; Width: 48;  Height: 48),
+    (Left: 686; Top: 296; Width: 48;  Height: 48), (Left: 740; Top: 296; Width: 48;  Height: 48)
   );
 
   KEY_KINDS: array[0..KEY_NUMS - 1] of TSCVKeyKind = (
@@ -420,7 +420,7 @@ begin
   FEdit.Color := clWhite;
   FEdit.Font.Name := '맑은 고딕';
   FEdit.Font.Height := -ScaleMin(24);
-  FEdit.SetBounds(ScaleX(106), ScaleY(42), ScaleX(452), ScaleY(32));
+  FEdit.SetBounds(ScaleX(106), ScaleY(22), ScaleX(452), ScaleY(32));
   FEdit.OnClick := EditClick;
   FEdit.OnKeyDown := EditKeyDown;
   FEdit.OnKeyPress := EditKeyPress;
@@ -839,7 +839,7 @@ begin
   Canvas.Brush.Style := bsSolid;
   Canvas.Brush.Color := clWhite;
   Canvas.Pen.Color := FColors.Border;
-  Canvas.Rectangle(ScaleX(100), ScaleY(36), ScaleX(564), ScaleY(80));
+  Canvas.Rectangle(ScaleX(100), ScaleY(16), ScaleX(564), ScaleY(60));
 
   // 키
   for var I := 0 to KEY_NUMS - 1 do
@@ -863,7 +863,7 @@ begin
 
   var LCreditSize := Canvas.TextExtent(CREDIT_TEXT);
   var LCreditLeft := ClientWidth - ScaleX(14) - LCreditSize.cx;
-  var LCreditTop := ScaleY(364) + (ClientHeight - ScaleY(364) - LCreditSize.cy) div 2;
+  var LCreditTop := ScaleY(344) + (ClientHeight - ScaleY(344) - LCreditSize.cy) div 2;
   FCreditRect := TRect.Create(LCreditLeft, LCreditTop, LCreditLeft + LCreditSize.cx, LCreditTop + LCreditSize.cy);
   Canvas.TextOut(LCreditLeft, LCreditTop, CREDIT_TEXT);
   Canvas.Font.Style := [];

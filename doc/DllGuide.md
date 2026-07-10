@@ -37,7 +37,7 @@ int __stdcall VKB_Show(
     int      left,          // 창 좌측 (화면 픽셀). left/top 모두 -1 = 화면 중앙
     int      top,           // 창 상단 (화면 픽셀)
     int      width,         // 키보드 폭 (96DPI 논리값). 0 이하 = 기본 800
-    int      height,        // 키보드 높이 (96DPI 논리값). 0 이하 = 기본 396
+    int      height,        // 키보드 높이 (96DPI 논리값). 0 이하 = 기본 376
     const wchar_t* title,   // 예약 인자 (무시됨, ABI 호환용 유지). NULL 권장
     wchar_t  passwordChar); // 암호 표시 문자. L'\0' = 일반 표시
 
