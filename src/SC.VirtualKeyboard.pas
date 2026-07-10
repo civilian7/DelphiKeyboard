@@ -20,7 +20,6 @@ uses
   Vcl.Graphics,
   Vcl.Controls,
   Vcl.Forms,
-  Vcl.StdCtrls,
   SC.Hangul;
 {$ENDREGION}
 
@@ -56,6 +55,7 @@ type
     FKeyColor: TColor;
     FKeyTextColor: TColor;
     FLanguage: TSCKeyboardLanguage;
+    FMaxLength: Integer;
     FPasswordChar: Char;
     FPosition: TSCKeyboardPosition;
     FPressedColor: TColor;
@@ -104,6 +104,9 @@ type
     property KeyTextColor: TColor read FKeyTextColor write FKeyTextColor;
     /// <summary>키보드가 처음 열릴 때의 입력 언어.</summary>
     property Language: TSCKeyboardLanguage read FLanguage write FLanguage;
+    /// <summary>입력 가능한 최대 문자 수 (조합 중인 글자 포함). 0 이면 무제한 (기본).
+    /// 한도에 도달하면 추가 입력이 무시됩니다.</summary>
+    property MaxLength: Integer read FMaxLength write FMaxLength;
     /// <summary>입력창의 암호 표시 문자. #0 이면 일반 표시.</summary>
     property PasswordChar: Char read FPasswordChar write FPasswordChar;
     /// <summary>키보드 창 표시 위치 (기본 kpScreenCenter).
@@ -282,47 +285,59 @@ const
 
 type
   // Execute 시점에 동적으로 생성되는 키보드 폼 (CreateNew 로 코드 생성 — dfm 불필요)
+  // 입력 표시는 별도 에디트 컨트롤 없이 폼이 직접 렌더링한다
+  // (확정 문자는 일반 표시, 조합 중 문자는 반전 블록으로 표시)
   TSCVirtualKeyboardForm = class(TForm)
   private
     FCapsLock: Boolean;
+    FCaret: Integer;               // 확정 텍스트(FText) 안의 삽입 위치 (0..Length)
+    FClearHot: Boolean;
+    FClearRect: TRect;
     FClickSound: Boolean;
     FColors: TSCKeyboardColors;
     FComposer: THangulComposer;
-    FComposeStart: Integer;
-    FComposing: string;
+    FComposing: string;            // 조합 중인 글자 (캐럿 위치에 반전 표시, 아직 FText 에 없음)
     FCreditHot: Boolean;
     FCreditRect: TRect;
-    FEdit: TEdit;
     FHotIndex: Integer;
+    FInputRect: TRect;
     FKorean: Boolean;
     FLogicalHeight: Integer;
     FLogicalWidth: Integer;
+    FMaxLength: Integer;
+    FPasswordChar: Char;
     FPressedIndex: Integer;
     FShift: Boolean;
+    FText: string;                 // 확정된 텍스트
     procedure ApplyRoundedCorners;
+    function  CaretFromX(AX: Integer): Integer;
+    procedure ClearAll;
     procedure CMMouseLeave(var Msg: TMessage); message CM_MOUSELEAVE;
     procedure CommitComposition;
+    procedure DrawInput;
     procedure DrawKey(AIndex: Integer);
-    procedure EditClick(Sender: TObject);
-    procedure EditKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
-    procedure EditKeyPress(Sender: TObject; var Key: Char);
     function  GetEditText: string;
     procedure HandleBackspace;
+    procedure HandleNavKey(const AVk: Word);
     procedure InputChar(AIndex: Integer);
     procedure InputJamo(const AJamo: Char);
     procedure InsertText(const AText: string);
     function  KeyAtPos(X, Y: Integer): Integer;
     function  KeyScreenRect(AIndex: Integer): TRect;
+    function  MaskText(const AText: string): string;
     procedure PressKey(AIndex: Integer);
     function  ScaleMin(AValue: Integer): Integer;
     function  ScaleX(AValue: Integer): Integer;
     function  ScaleY(AValue: Integer): Integer;
     procedure SetColors(const AValue: TSCKeyboardColors);
     procedure SetEditText(const AValue: string);
+    procedure SetInputFont;
+    function  TotalLength: Integer;
   protected
     procedure ChangeScale(M, D: Integer; isDpiChange: Boolean); override;
     procedure CreateWnd; override;
-    procedure DoShow; override;
+    procedure KeyDown(var Key: Word; Shift: TShiftState); override;
+    procedure KeyPress(var Key: Char); override;
     procedure MouseDown(Button: TMouseButton; Shift: TShiftState; X, Y: Integer); override;
     procedure MouseMove(Shift: TShiftState; X, Y: Integer); override;
     procedure MouseUp(Button: TMouseButton; Shift: TShiftState; X, Y: Integer); override;
@@ -335,6 +350,8 @@ type
     property Colors: TSCKeyboardColors read FColors write SetColors;
     property EditText: string read GetEditText write SetEditText;
     property Korean: Boolean read FKorean write FKorean;
+    property MaxLength: Integer read FMaxLength write FMaxLength;
+    property PasswordChar: Char read FPasswordChar write FPasswordChar;
   end;
 
 var
@@ -401,10 +418,10 @@ begin
   FColors.Toggled := COLOR_KEY_ON;
 
   FComposer := THangulComposer.Create;
-  FComposeStart := -1;
   FHotIndex := -1;
   FPressedIndex := -1;
   FKorean := True;
+  FPasswordChar := #0;
 
   BorderStyle := bsNone;
   Position := poScreenCenter;
@@ -413,17 +430,6 @@ begin
   Font.Name := 'Segoe UI';
   ClientWidth := ScaleX(FORM_W);
   ClientHeight := ScaleY(FORM_H);
-
-  FEdit := TEdit.Create(Self);
-  FEdit.Parent := Self;
-  FEdit.BorderStyle := bsNone;
-  FEdit.Color := clWhite;
-  FEdit.Font.Name := '맑은 고딕';
-  FEdit.Font.Height := -ScaleMin(24);
-  FEdit.SetBounds(ScaleX(106), ScaleY(22), ScaleX(452), ScaleY(32));
-  FEdit.OnClick := EditClick;
-  FEdit.OnKeyDown := EditKeyDown;
-  FEdit.OnKeyPress := EditKeyPress;
 end;
 
 destructor TSCVirtualKeyboardForm.Destroy;
@@ -456,6 +462,27 @@ begin
   SetWindowRgn(Handle, CreateRoundRectRgn(0, 0, Width + 1, Height + 1, LDiameter, LDiameter), True);
 end;
 
+// 입력 상자 안의 클릭 X 좌표에서 가장 가까운 캐럿 위치를 구한다
+function TSCVirtualKeyboardForm.CaretFromX(AX: Integer): Integer;
+begin
+  SetInputFont;
+
+  var LDisplay := MaskText(FText);
+  var LTarget := AX - (FInputRect.Left + ScaleX(8));
+  Result := Length(LDisplay);
+
+  for var I := 1 to Length(LDisplay) do
+  begin
+    var LPrev := Canvas.TextWidth(Copy(LDisplay, 1, I - 1));
+    var LCur := Canvas.TextWidth(Copy(LDisplay, 1, I));
+    if LTarget < (LPrev + LCur) div 2 then
+    begin
+      Result := I - 1;
+      Break;
+    end;
+  end;
+end;
+
 procedure TSCVirtualKeyboardForm.ChangeScale(M, D: Integer; isDpiChange: Boolean);
 begin
   inherited ChangeScale(M, D, isDpiChange);
@@ -464,25 +491,42 @@ begin
   Invalidate;
 end;
 
+// 입력된 텍스트와 조합 상태를 모두 지운다 (✕ 버튼)
+procedure TSCVirtualKeyboardForm.ClearAll;
+begin
+  FComposer.Reset;
+  FComposing := '';
+  FText := '';
+  FCaret := 0;
+  Invalidate;
+end;
+
 procedure TSCVirtualKeyboardForm.CMMouseLeave(var Msg: TMessage);
 begin
   inherited;
 
-  if (FHotIndex <> -1) or FCreditHot then
+  if (FHotIndex <> -1) or FCreditHot or FClearHot then
   begin
     FHotIndex := -1;
+    FClearHot := False;
     FCreditHot := False;
     Cursor := crDefault;
     Invalidate;
   end;
 end;
 
-// 조합 상태만 초기화한다. 조합 중이던 글자는 이미 에디트에 표시되어 있으므로 그대로 확정된다
+// 조합 중이던 글자를 확정 텍스트로 옮기고 조합 상태를 초기화한다
 procedure TSCVirtualKeyboardForm.CommitComposition;
 begin
+  if FComposing <> '' then
+  begin
+    Insert(FComposing, FText, FCaret + 1);
+    Inc(FCaret, Length(FComposing));
+    FComposing := '';
+    Invalidate;
+  end;
+
   FComposer.Reset;
-  FComposing := '';
-  FComposeStart := -1;
 end;
 
 procedure TSCVirtualKeyboardForm.CreateWnd;
@@ -492,12 +536,92 @@ begin
   ApplyRoundedCorners;
 end;
 
-procedure TSCVirtualKeyboardForm.DoShow;
+// 입력 표시 상자를 그린다: 확정 텍스트 + 조합 중 글자(반전) + 캐럿 + 전체 지움(✕) 버튼
+procedure TSCVirtualKeyboardForm.DrawInput;
 begin
-  inherited DoShow;
+  FInputRect := TRect.Create(ScaleX(100), ScaleY(16), ScaleX(564), ScaleY(60));
 
-  ActiveControl := FEdit;
-  FEdit.SelectAll;
+  // 상자 배경·테두리
+  Canvas.Brush.Style := bsSolid;
+  Canvas.Brush.Color := clWhite;
+  Canvas.Pen.Color := FColors.Border;
+  Canvas.Pen.Width := 1;
+  Canvas.Rectangle(FInputRect);
+
+  // 전체 지움(✕) 버튼 — 상자 우측
+  var LClearSize := ScaleMin(18);
+  var LClearLeft := FInputRect.Right - ScaleX(10) - LClearSize;
+  var LClearTop := FInputRect.Top + (FInputRect.Height - LClearSize) div 2;
+  FClearRect := TRect.Create(LClearLeft, LClearTop, LClearLeft + LClearSize, LClearTop + LClearSize);
+
+  if FClearHot then
+  begin
+    Canvas.Pen.Color := FColors.KeyText;
+  end
+  else
+  begin
+    Canvas.Pen.Color := FColors.SubText;
+  end;
+
+  Canvas.Pen.Width := Max(1, ScaleMin(2));
+  var LGap := LClearSize div 4;
+  Canvas.MoveTo(FClearRect.Left + LGap, FClearRect.Top + LGap);
+  Canvas.LineTo(FClearRect.Right - LGap, FClearRect.Bottom - LGap);
+  Canvas.MoveTo(FClearRect.Right - LGap, FClearRect.Top + LGap);
+  Canvas.LineTo(FClearRect.Left + LGap, FClearRect.Bottom - LGap);
+  Canvas.Pen.Width := 1;
+
+  // 텍스트 (암호 모드면 마스킹). 캐럿이 항상 보이도록 넘치면 왼쪽으로 스크롤
+  SetInputFont;
+
+  var LBefore := MaskText(Copy(FText, 1, FCaret));
+  var LComp := MaskText(FComposing);
+  var LAfter := MaskText(Copy(FText, FCaret + 1, MaxInt));
+
+  var LTextLeft := FInputRect.Left + ScaleX(8);
+  var LAvail := FClearRect.Left - ScaleX(8) - LTextLeft;
+  var LBeforeW := Canvas.TextWidth(LBefore);
+  var LCompW := Canvas.TextWidth(LComp);
+  var LOffset := Max(0, LBeforeW + LCompW - LAvail);
+
+  var LSaveDC := SaveDC(Canvas.Handle);
+  try
+    IntersectClipRect(Canvas.Handle, LTextLeft, FInputRect.Top + 1,
+      LTextLeft + LAvail + 1, FInputRect.Bottom - 1);
+
+    var LY := FInputRect.Top + (FInputRect.Height - Canvas.TextHeight('가')) div 2;
+    var LX := LTextLeft - LOffset;
+
+    // 캐럿 앞 확정 텍스트
+    Canvas.Brush.Style := bsClear;
+    Canvas.Font.Color := FColors.KeyText;
+    Canvas.TextOut(LX, LY, LBefore);
+    Inc(LX, LBeforeW);
+
+    if LComp <> '' then
+    begin
+      // 조합 중 글자는 반전 블록으로 표시 (블록 자체가 캐럿 역할)
+      Canvas.Brush.Style := bsSolid;
+      Canvas.Brush.Color := FColors.KeyText;
+      Canvas.Font.Color := clWhite;
+      Canvas.TextOut(LX, LY, LComp);
+      Inc(LX, LCompW);
+      Canvas.Brush.Style := bsClear;
+      Canvas.Font.Color := FColors.KeyText;
+    end
+    else
+    begin
+      // 조합 중이 아니면 세로선 캐럿
+      Canvas.Pen.Color := FColors.KeyText;
+      Canvas.MoveTo(LX, FInputRect.Top + ScaleY(7));
+      Canvas.LineTo(LX, FInputRect.Bottom - ScaleY(7));
+    end;
+
+    // 캐럿 뒤 확정 텍스트
+    Canvas.TextOut(LX, LY, LAfter);
+  finally
+    RestoreDC(Canvas.Handle, LSaveDC);
+  end;
 end;
 
 procedure TSCVirtualKeyboardForm.DrawKey(AIndex: Integer);
@@ -608,36 +732,11 @@ begin
   end;
 end;
 
-procedure TSCVirtualKeyboardForm.EditClick(Sender: TObject);
-begin
-  // 커서 위치가 바뀌면 조합 중이던 글자는 그대로 확정
-  CommitComposition;
-end;
-
-procedure TSCVirtualKeyboardForm.EditKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
-begin
-  // 물리 키보드 입력·탐색 키가 들어오면 조합 상태와 어긋나므로 먼저 확정
-  CommitComposition;
-end;
-
-procedure TSCVirtualKeyboardForm.EditKeyPress(Sender: TObject; var Key: Char);
-begin
-  if Key = #13 then
-  begin
-    Key := #0;
-    ModalResult := mrOk;
-  end
-  else
-  if Key = #27 then
-  begin
-    Key := #0;
-    ModalResult := mrCancel;
-  end;
-end;
-
 function TSCVirtualKeyboardForm.GetEditText: string;
 begin
-  Result := FEdit.Text;
+  // 조합 중인 글자도 입력된 것으로 취급한다
+  Result := FText;
+  Insert(FComposing, Result, FCaret + 1);
 end;
 
 procedure TSCVirtualKeyboardForm.HandleBackspace;
@@ -646,25 +745,54 @@ begin
   begin
     // 조합 중이면 자모 단위로 되돌린다
     FComposer.Backspace;
-    var LComposing := FComposer.Composing;
-
-    var LText := FEdit.Text;
-    Delete(LText, FComposeStart + 1, Length(FComposing));
-    Insert(LComposing, LText, FComposeStart + 1);
-    FEdit.Text := LText;
-    FEdit.SelStart := FComposeStart + Length(LComposing);
-
-    FComposing := LComposing;
-    if FComposing = '' then
-    begin
-      FComposeStart := -1;
-    end;
+    FComposing := FComposer.Composing;
+    Invalidate;
   end
   else
+  if FCaret > 0 then
   begin
-    // 에디트 기본 백스페이스 동작 (선택 영역 삭제 포함)
-    FEdit.Perform(WM_CHAR, 8, 0);
+    Delete(FText, FCaret, 1);
+    Dec(FCaret);
+    Invalidate;
   end;
+end;
+
+// 탐색·삭제 키 처리 (가상 키와 물리 키 공용). 조합 중이던 글자는 먼저 확정된다
+procedure TSCVirtualKeyboardForm.HandleNavKey(const AVk: Word);
+begin
+  CommitComposition;
+
+  case AVk of
+    VK_LEFT:
+      begin
+        FCaret := Max(0, FCaret - 1);
+      end;
+
+    VK_RIGHT:
+      begin
+        FCaret := Min(Length(FText), FCaret + 1);
+      end;
+
+    VK_HOME:
+      begin
+        FCaret := 0;
+      end;
+
+    VK_END:
+      begin
+        FCaret := Length(FText);
+      end;
+
+    VK_DELETE:
+      begin
+        if FCaret < Length(FText) then
+        begin
+          Delete(FText, FCaret + 1, 1);
+        end;
+      end;
+  end;
+
+  Invalidate;
 end;
 
 procedure TSCVirtualKeyboardForm.InputChar(AIndex: Integer);
@@ -707,40 +835,50 @@ end;
 
 procedure TSCVirtualKeyboardForm.InputJamo(const AJamo: Char);
 begin
-  // 선택 영역이 있으면 먼저 삭제하고 그 자리에서 조합 시작
-  if FEdit.SelLength > 0 then
+  // 새 글자를 시작할 자리가 없으면 입력을 무시한다
+  if (FMaxLength > 0) and not FComposer.IsComposing and (TotalLength >= FMaxLength) then
   begin
-    CommitComposition;
-    FEdit.SelText := '';
-  end;
-
-  if FComposeStart < 0 then
-  begin
-    FComposeStart := FEdit.SelStart;
+    Exit;
   end;
 
   var LCommitted: string;
   var LComposing := FComposer.Feed(AJamo, LCommitted);
 
-  // 화면의 조합 중 글자를 (확정분 + 새 조합분)으로 교체
-  var LText := FEdit.Text;
-  Delete(LText, FComposeStart + 1, Length(FComposing));
-  Insert(LCommitted + LComposing, LText, FComposeStart + 1);
-  FEdit.Text := LText;
-
-  FComposeStart := FComposeStart + Length(LCommitted);
-  FComposing := LComposing;
-  FEdit.SelStart := FComposeStart + Length(FComposing);
-
-  if FComposing = '' then
+  // 조합 분리로 글자 수가 한도를 넘으면 새로 시작된 조합만 버린다 (기존 조합 확정분은 유지)
+  if (FMaxLength > 0) and (Length(FText) + Length(LCommitted) + Length(LComposing) > FMaxLength) then
   begin
-    FComposeStart := -1;
+    FComposer.Reset;
+    LComposing := '';
   end;
+
+  // 확정분은 캐럿 위치의 확정 텍스트로 옮기고, 조합분은 반전 표시용으로 유지
+  Insert(LCommitted, FText, FCaret + 1);
+  Inc(FCaret, Length(LCommitted));
+  FComposing := LComposing;
+  Invalidate;
 end;
 
+// 캐럿 위치에 텍스트를 삽입한다 (호출 전 조합 확정 필요). MaxLength 초과분은 잘린다
 procedure TSCVirtualKeyboardForm.InsertText(const AText: string);
 begin
-  FEdit.SelText := AText;
+  var LText := AText;
+  if FMaxLength > 0 then
+  begin
+    var LAvail := FMaxLength - TotalLength;
+    if LAvail <= 0 then
+    begin
+      Exit;
+    end;
+
+    if Length(LText) > LAvail then
+    begin
+      SetLength(LText, LAvail);
+    end;
+  end;
+
+  Insert(LText, FText, FCaret + 1);
+  Inc(FCaret, Length(LText));
+  Invalidate;
 end;
 
 function TSCVirtualKeyboardForm.KeyAtPos(X, Y: Integer): Integer;
@@ -757,6 +895,49 @@ begin
   end;
 end;
 
+// 물리 키보드 탐색·삭제 키 (마우스 전용 도구지만 물리 입력도 보조 지원)
+procedure TSCVirtualKeyboardForm.KeyDown(var Key: Word; Shift: TShiftState);
+begin
+  inherited KeyDown(Key, Shift);
+
+  case Key of
+    VK_LEFT, VK_RIGHT, VK_HOME, VK_END, VK_DELETE:
+      begin
+        HandleNavKey(Key);
+      end;
+  end;
+end;
+
+// 물리 키보드 문자 입력 (조합 오토마타를 거치지 않고 문자 그대로 삽입)
+procedure TSCVirtualKeyboardForm.KeyPress(var Key: Char);
+begin
+  inherited KeyPress(Key);
+
+  if Key = #13 then
+  begin
+    CommitComposition;
+    ModalResult := mrOk;
+  end
+  else
+  if Key = #27 then
+  begin
+    ModalResult := mrCancel;
+  end
+  else
+  if Key = #8 then
+  begin
+    HandleBackspace;
+  end
+  else
+  if Key >= ' ' then
+  begin
+    CommitComposition;
+    InsertText(Key);
+  end;
+
+  Key := #0;
+end;
+
 function TSCVirtualKeyboardForm.KeyScreenRect(AIndex: Integer): TRect;
 begin
   Result := TRect.Create(
@@ -764,6 +945,19 @@ begin
     ScaleY(KEY_RECTS[AIndex].Top),
     ScaleX(KEY_RECTS[AIndex].Left + KEY_RECTS[AIndex].Width),
     ScaleY(KEY_RECTS[AIndex].Top + KEY_RECTS[AIndex].Height));
+end;
+
+// 암호 모드(PasswordChar 지정)면 문자를 마스킹해서 표시한다
+function TSCVirtualKeyboardForm.MaskText(const AText: string): string;
+begin
+  if FPasswordChar = #0 then
+  begin
+    Result := AText;
+  end
+  else
+  begin
+    Result := StringOfChar(FPasswordChar, Length(AText));
+  end;
 end;
 
 procedure TSCVirtualKeyboardForm.MouseDown(Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
@@ -779,6 +973,27 @@ begin
   if FCreditRect.Contains(Point(X, Y)) then
   begin
     ShellExecute(0, 'open', CREDIT_URL, nil, nil, SW_SHOWNORMAL);
+    Exit;
+  end;
+
+  // 전체 지움(✕) 버튼
+  if FClearRect.Contains(Point(X, Y)) then
+  begin
+    if FClickSound then
+    begin
+      PlayClickSound;
+    end;
+
+    ClearAll;
+    Exit;
+  end;
+
+  // 입력 상자 클릭 → 캐럿 이동 (조합 중이던 글자는 확정)
+  if FInputRect.Contains(Point(X, Y)) then
+  begin
+    CommitComposition;
+    FCaret := CaretFromX(X);
+    Invalidate;
     Exit;
   end;
 
@@ -803,11 +1018,13 @@ begin
 
   var LIndex := KeyAtPos(X, Y);
   var LCreditHot := FCreditRect.Contains(Point(X, Y));
-  if (LIndex <> FHotIndex) or (LCreditHot <> FCreditHot) then
+  var LClearHot := FClearRect.Contains(Point(X, Y));
+  if (LIndex <> FHotIndex) or (LCreditHot <> FCreditHot) or (LClearHot <> FClearHot) then
   begin
     FHotIndex := LIndex;
+    FClearHot := LClearHot;
     FCreditHot := LCreditHot;
-    if FCreditHot then
+    if FCreditHot or FClearHot then
     begin
       Cursor := crHandPoint;
     end
@@ -835,11 +1052,8 @@ procedure TSCVirtualKeyboardForm.Paint;
 begin
   inherited Paint;
 
-  // 입력창 테두리
-  Canvas.Brush.Style := bsSolid;
-  Canvas.Brush.Color := clWhite;
-  Canvas.Pen.Color := FColors.Border;
-  Canvas.Rectangle(ScaleX(100), ScaleY(16), ScaleX(564), ScaleY(60));
+  // 입력 표시 상자
+  DrawInput;
 
   // 키
   for var I := 0 to KEY_NUMS - 1 do
@@ -928,28 +1142,28 @@ begin
         CommitComposition;
       end;
 
-    vkkHome, vkkEnd, vkkInsert, vkkDelete, vkkUp, vkkDown, vkkLeft, vkkRight:
+    vkkHome, vkkEnd, vkkDelete, vkkLeft, vkkRight:
       begin
-        CommitComposition;
-
         var LVk: Word := VK_HOME;
         case KEY_KINDS[AIndex] of
           vkkEnd:    LVk := VK_END;
-          vkkInsert: LVk := VK_INSERT;
           vkkDelete: LVk := VK_DELETE;
-          vkkUp:     LVk := VK_UP;
-          vkkDown:   LVk := VK_DOWN;
           vkkLeft:   LVk := VK_LEFT;
           vkkRight:  LVk := VK_RIGHT;
         end;
 
-        FEdit.Perform(WM_KEYDOWN, LVk, 0);
-        FEdit.Perform(WM_KEYUP, LVk, 0);
+        HandleNavKey(LVk);
+      end;
+
+    vkkInsert, vkkUp, vkkDown:
+      begin
+        // 한 줄 입력에서는 의미가 없다 — 조합 중이던 글자만 확정
+        CommitComposition;
       end;
 
     vkkCtrl, vkkAlt:
       begin
-        // 단독 에디트 입력에서는 의미가 없어 동작하지 않는다 (표시용)
+        // 단독 입력 도구에서는 의미가 없어 동작하지 않는다 (표시용)
       end;
   end;
 end;
@@ -989,7 +1203,30 @@ end;
 
 procedure TSCVirtualKeyboardForm.SetEditText(const AValue: string);
 begin
-  FEdit.Text := AValue;
+  FComposer.Reset;
+  FComposing := '';
+  FText := AValue;
+  if (FMaxLength > 0) and (Length(FText) > FMaxLength) then
+  begin
+    SetLength(FText, FMaxLength);
+  end;
+
+  FCaret := Length(FText);
+  Invalidate;
+end;
+
+// 입력 표시용 폰트를 캔버스에 설정한다 (그리기·캐럿 좌표 계산 공용)
+procedure TSCVirtualKeyboardForm.SetInputFont;
+begin
+  Canvas.Font.Name := '맑은 고딕';
+  Canvas.Font.Height := -ScaleMin(24);
+  Canvas.Font.Style := [];
+end;
+
+// 현재 입력된 총 글자 수 (조합 중인 글자 포함)
+function TSCVirtualKeyboardForm.TotalLength: Integer;
+begin
+  Result := Length(FText) + Length(FComposing);
 end;
 
 {$ENDREGION}
@@ -1008,6 +1245,7 @@ begin
   FKeyColor := COLOR_KEY_FACE;
   FKeyTextColor := COLOR_KEY_TEXT;
   FLanguage := klKorean;
+  FMaxLength := 0;
   FPasswordChar := #0;
   FPosition := kpScreenCenter;
   FPressedColor := COLOR_KEY_DOWN;
@@ -1058,11 +1296,9 @@ begin
     LForm.ClickSound := FClickSound;
     LForm.Colors := LColors;
     LForm.Korean := FLanguage = klKorean;
+    LForm.MaxLength := FMaxLength;
+    LForm.PasswordChar := FPasswordChar;
     LForm.EditText := AText;
-    if FPasswordChar <> #0 then
-    begin
-      LForm.FEdit.PasswordChar := FPasswordChar;
-    end;
 
     // 표시 위치 적용
     case FPosition of

@@ -16,9 +16,9 @@ const
   VKB_LANG_KOREAN  = 1;
 
 /// <summary>가상 키보드 창을 모달로 띄우고 입력을 받습니다.</summary>
-/// <param name="ABuffer">널 종단 유니코드 입출력 버퍼. 호출 시 초기 텍스트, 확정 시 입력 결과가 담깁니다.
-/// 결과가 버퍼보다 길면 (ABufferSize - 1) 문자로 잘립니다.</param>
-/// <param name="ABufferSize">버퍼 용량 (문자 수, 널 종단 포함). 1024 권장</param>
+/// <param name="ABuffer">널 종단 유니코드 입출력 버퍼. 호출 시 초기 텍스트, 확정 시 입력 결과가 담깁니다.</param>
+/// <param name="ABufferSize">버퍼 용량 (문자 수, 널 종단 포함). 1024 권장.
+/// (ABufferSize - 1) 이 입력 가능한 최대 글자 수로 적용되어 결과가 잘리지 않습니다</param>
 /// <param name="ALanguage">처음 열릴 때 입력 언어 (VKB_LANG_ENGLISH / VKB_LANG_KOREAN)</param>
 /// <param name="ALeft">창 좌측 좌표 (화면 픽셀). ALeft/ATop 모두 -1 이면 화면 중앙</param>
 /// <param name="ATop">창 상단 좌표 (화면 픽셀)</param>
