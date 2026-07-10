@@ -141,7 +141,10 @@ dcc32.exe VirtualKeyboardDemo.dpr -U"C:\Program Files (x86)\Embarcadero\Studio\3
 
 ## 출처 (원저작자)
 
-`legacy\` 의 구 구현은 C++Builder 소스를 Delphi 로 포팅한 것입니다.
-소스에 저작자 이름은 남아 있지 않아 원저작자는 확인되지 않았습니다.
+`legacy\` 의 구 구현은 볼랜드포럼 컴포넌트 게시판에 공유된
+"[한/영 입력 가능한 가상 키보드 입니다.](http://cbuilder.borlandforum.com/impboard/impboard.dll?action=read&db=component&no=836)"
+(godson2, 2021-12-30) 의 C++Builder 소스를 Delphi 로 포팅한 것입니다.
+해당 글은 **박영목** 님의 원작 소스를 C++Builder 11 에서 사용 가능하도록
+손본 것이라고 밝히고 있습니다.
 현재의 `src\` 구현(조합 오토마타·벡터 렌더링)은 키 배치 좌표 테이블 외에는
 전면 재작성되었습니다.
