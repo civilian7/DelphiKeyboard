@@ -139,6 +139,11 @@ dcc32.exe VirtualKeyboardDemo.dpr -U"C:\Program Files (x86)\Embarcadero\Studio\3
 - **폴더 재구성**: `src\` / `demos\` / `bin\`(+`win32\`) / `doc\` / `legacy\`,
   데모를 `Project1` → `VirtualKeyboardDemo` 로 변경
 
+## 라이선스
+
+[MIT License](LICENSE). 단, `legacy\` 폴더는 아래 출처의 커뮤니티 공유 소스를 포팅한
+참고용 보존본으로, 원저작자의 별도 라이선스 명시가 없어 MIT 적용 대상에서 제외합니다.
+
 ## 출처 (원저작자)
 
 `legacy\` 의 구 구현은 볼랜드포럼 컴포넌트 게시판에 공유된
