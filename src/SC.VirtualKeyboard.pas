@@ -355,47 +355,70 @@ type
   end;
 
 var
-  // 합성된 클릭음 WAV (프로세스 수명 동안 유지 — SND_ASYNC 재생 중 해제 방지)
-  GClickWav: TBytes;
+  // 합성된 클릭음 PCM 샘플 (프로세스 수명 동안 유지 — 재생 중 해제 방지)
+  GClickPcm: TBytes;
+  // 한 번만 열어두는 waveOut 디바이스 (finalization 에서 정리)
+  GWaveOut: HWAVEOUT;
+  // 재생 헤더 풀 — 연타 시 이전 소리를 중단시키지 않고 겹쳐 재생하기 위한 풀
+  // (waveOut 디바이스 지연 ~90ms 를 감안, 극한 연타에서도 고갈되지 않도록 8개)
+  GWaveHeaders: array[0..7] of TWaveHdr;
 
-// 짧은 클릭음을 메모리에서 합성해 비동기 재생한다 (리소스·파일 불필요)
+// 짧은 클릭음을 메모리에서 합성해 waveOut 으로 비동기 재생한다 (리소스·파일 불필요)
+// PlaySound 는 호출마다 디바이스를 새로 열고 이전 소리를 purge 하므로 연타 시 소리가 유실된다.
+// 디바이스를 최초 1회만 열어두고 이후에는 waveOutWrite 로 재생만 큐잉해 유실을 방지한다.
 procedure PlayClickSound;
 const
   SAMPLE_RATE = 44100;                              // 샘플레이트 (Hz)
   CLICK_MS = 28;                                    // 클릭음 길이 (밀리초)
-  DATA_OFFSET = 44;                                 // WAV 헤더 크기
 begin
-  if Length(GClickWav) = 0 then
+  // PCM 샘플 합성 (최초 1회) — 급감쇠 사인파, 기계식 키 클릭과 유사한 톤
+  if Length(GClickPcm) = 0 then
   begin
     var LSampleCount := SAMPLE_RATE * CLICK_MS div 1000;
-    var LDataSize := LSampleCount * SizeOf(SmallInt);
-    SetLength(GClickWav, DATA_OFFSET + LDataSize);
-
-    // RIFF/WAVE 헤더 (PCM 16비트 모노)
-    PCardinal(@GClickWav[0])^ := $46464952;                       // 'RIFF'
-    PCardinal(@GClickWav[4])^ := DATA_OFFSET - 8 + LDataSize;     // 파일 크기 - 8
-    PCardinal(@GClickWav[8])^ := $45564157;                       // 'WAVE'
-    PCardinal(@GClickWav[12])^ := $20746D66;                      // 'fmt '
-    PCardinal(@GClickWav[16])^ := 16;                             // fmt 청크 크기
-    PWord(@GClickWav[20])^ := 1;                                  // PCM
-    PWord(@GClickWav[22])^ := 1;                                  // 모노
-    PCardinal(@GClickWav[24])^ := SAMPLE_RATE;
-    PCardinal(@GClickWav[28])^ := SAMPLE_RATE * SizeOf(SmallInt); // 초당 바이트
-    PWord(@GClickWav[32])^ := SizeOf(SmallInt);                   // 블록 정렬
-    PWord(@GClickWav[34])^ := 16;                                 // 샘플 비트수
-    PCardinal(@GClickWav[36])^ := $61746164;                      // 'data'
-    PCardinal(@GClickWav[40])^ := LDataSize;
-
-    // 급감쇠 사인파 — 기계식 키 클릭과 유사한 톤
+    SetLength(GClickPcm, LSampleCount * SizeOf(SmallInt));
     for var I := 0 to LSampleCount - 1 do
     begin
       var LTime := I / SAMPLE_RATE;
       var LSample := Round(32767 * 0.32 * Sin(2 * Pi * 1750 * LTime) * Exp(-LTime / 0.005));
-      PSmallInt(@GClickWav[DATA_OFFSET + I * SizeOf(SmallInt)])^ := SmallInt(LSample);
+      PSmallInt(@GClickPcm[I * SizeOf(SmallInt)])^ := SmallInt(LSample);
     end;
   end;
 
-  PlaySound(PChar(@GClickWav[0]), 0, SND_MEMORY or SND_ASYNC or SND_NODEFAULT);
+  // 디바이스 오픈 + 헤더 풀 준비 (최초 1회) — 실패하면 조용히 건너뛴다 (다음 호출에서 재시도)
+  if GWaveOut = 0 then
+  begin
+    var LFormat := Default(TWaveFormatEx);
+    LFormat.wFormatTag := WAVE_FORMAT_PCM;
+    LFormat.nChannels := 1;
+    LFormat.nSamplesPerSec := SAMPLE_RATE;
+    LFormat.wBitsPerSample := 16;
+    LFormat.nBlockAlign := LFormat.nChannels * LFormat.wBitsPerSample div 8;
+    LFormat.nAvgBytesPerSec := LFormat.nSamplesPerSec * LFormat.nBlockAlign;
+    if waveOutOpen(@GWaveOut, WAVE_MAPPER, @LFormat, 0, 0, CALLBACK_NULL) <> MMSYSERR_NOERROR then
+    begin
+      GWaveOut := 0;
+      Exit;
+    end;
+
+    // 모든 헤더가 같은 PCM 버퍼를 가리킨다 (버퍼는 읽기 전용이므로 공유 가능)
+    for var I := Low(GWaveHeaders) to High(GWaveHeaders) do
+    begin
+      GWaveHeaders[I] := Default(TWaveHdr);
+      GWaveHeaders[I].lpData := PAnsiChar(@GClickPcm[0]);
+      GWaveHeaders[I].dwBufferLength := Length(GClickPcm);
+      waveOutPrepareHeader(GWaveOut, @GWaveHeaders[I], SizeOf(TWaveHdr));
+    end;
+  end;
+
+  // 재생이 끝난(큐에 없는) 헤더를 찾아 큐잉 — 전부 재생 중이면 이번 클릭음만 생략
+  for var I := Low(GWaveHeaders) to High(GWaveHeaders) do
+  begin
+    if (GWaveHeaders[I].dwFlags and WHDR_INQUEUE) = 0 then
+    begin
+      waveOutWrite(GWaveOut, @GWaveHeaders[I], SizeOf(TWaveHdr));
+      Exit;
+    end;
+  end;
 end;
 
 {$REGION 'TSCVirtualKeyboardForm'}
@@ -1352,5 +1375,21 @@ begin
 end;
 
 {$ENDREGION}
+
+initialization
+
+finalization
+  // 열어둔 waveOut 디바이스 정리 (재생 중단 → 헤더 해제 → 닫기 순서 준수)
+  if GWaveOut <> 0 then
+  begin
+    waveOutReset(GWaveOut);
+    for var I := Low(GWaveHeaders) to High(GWaveHeaders) do
+    begin
+      waveOutUnprepareHeader(GWaveOut, @GWaveHeaders[I], SizeOf(TWaveHdr));
+    end;
+
+    waveOutClose(GWaveOut);
+    GWaveOut := 0;
+  end;
 
 end.

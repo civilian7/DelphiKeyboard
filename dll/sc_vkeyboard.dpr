@@ -12,7 +12,7 @@ const
   VKB_CANCELLED = 0;    // ESC 로 취소
   VKB_ERROR     = -1;   // 잘못된 인자 또는 내부 오류
 
-  VKB_DLL_VERSION = $0103;  // 1.3
+  VKB_DLL_VERSION = $0104;  // 1.4
 
 var
   // VKB_SetClickSound 로 설정하는 전역 옵션 (이후 VKB_Show 호출에 적용)
