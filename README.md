@@ -128,6 +128,40 @@ TSCVirtualKeyboard.Instance.KeyTextColor := $00E0E0E0;
 - The window has rounded corners (DWM on Windows 11, window-region fallback on older versions)
 - Clicking the `@시골프로그래머` credit at the bottom right opens the GitHub repository
 
+## Using on Non-Korean Windows
+
+The keyboard does not use the OS IME — Hangul is composed by the built-in automaton — so it
+works on Windows in **any display language** (English, Japanese, ...) without installing a
+Korean IME or changing the system locale. The DLL interface is UTF-16 (`wchar_t`),
+independent of the system code page.
+
+### Installing Korean Fonts
+
+The keyboard renders Hangul with **Malgun Gothic**, which is part of the base install of
+every desktop edition of Windows regardless of language — normally there is nothing to
+install. If Hangul appears as squares (□) — e.g. on Windows Server or a stripped-down
+image — install Korean fonts in one of these ways:
+
+- **Settings**: Settings → Apps → Optional features → **Add a feature** → install
+  **"Korean Supplemental Fonts"**
+- **PowerShell (run as administrator)**:
+
+  ```powershell
+  Add-WindowsCapability -Online -Name "Language.Fonts.Kore~~~und-KORE~0.0.1.0"
+  ```
+
+- **Language pack**: Settings → Time & Language → Language & region → **Add a language** →
+  **한국어 (Korean)**. Korean fonts are installed along with the language pack; the Korean
+  IME included there is *not* required by this keyboard
+
+### Console Output Note
+
+On a non-Korean console code page, Hangul printed by the C#/C console demos may show as
+`??`. Switch the console output to UTF-8 (`chcp 65001`, or in C#
+`Console.OutputEncoding = System.Text.Encoding.UTF8`). This affects console *display*
+only — the keyboard input itself is unaffected (Python 3.6+ writes via the console API and
+has no such issue).
+
 ## Native DLL (Use from Other Languages)
 
 From C#, C/C++, Python, and any language with C ABI (FFI) support, use `sc_vkeyboard.dll`.
@@ -244,6 +278,15 @@ bitness-independent, so there are no IFDEF branches. The DLL import demo
 > Set the DPI awareness to **PerMonitorV2** in the project options.
 
 ## Changelog
+
+### 2026-07-11 (v1.3)
+
+- **Font matching fix for non-Korean Windows**: the input-display font was specified by its
+  Korean localized name (`'맑은 고딕'`), which can fail to match on non-Korean Windows;
+  changed to the canonical English name **`'Malgun Gothic'`** so rendering is identical on
+  Windows in any language
+- **README**: added a section on non-Korean Windows support and installing Korean fonts
+- DLLs rebuilt with the fix (`VKB_Version` now returns 1.3; no ABI changes)
 
 ### 2026-07-10 (v1.2)
 

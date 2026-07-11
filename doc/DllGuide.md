@@ -45,7 +45,7 @@ int __stdcall VKB_Show(
 // 클릭음은 DLL 내부에서 합성하므로 별도 사운드 파일이 필요 없다. (v1.1+)
 void __stdcall VKB_SetClickSound(int enabled);
 
-// DLL 버전. 상위 바이트 = 메이저, 하위 바이트 = 마이너 (0x0102 = v1.2)
+// DLL 버전. 상위 바이트 = 메이저, 하위 바이트 = 마이너 (0x0103 = v1.3)
 int __stdcall VKB_Version(void);
 ```
 
@@ -54,6 +54,9 @@ int __stdcall VKB_Version(void);
 >
 > v1.2 변경: `bufferSize - 1` 이 입력 가능한 최대 글자 수로 적용되어 결과가 잘리지 않습니다.
 > 조합 중인 문자는 입력창에 반전 블록으로 표시되며, 입력창 우측 ✕ 로 전체 지움이 가능합니다.
+>
+> v1.3 변경: 입력 표시부 폰트를 영문 정식 이름(`Malgun Gothic`)으로 지정하도록 수정 —
+> 비한국어 Windows 에서도 동일하게 렌더링됩니다 (ABI 변경 없음).
 
 ## 언어별 예제
 

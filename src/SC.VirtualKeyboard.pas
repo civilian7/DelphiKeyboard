@@ -1219,7 +1219,8 @@ end;
 // 입력 표시용 폰트를 캔버스에 설정한다 (그리기·캐럿 좌표 계산 공용)
 procedure TSCVirtualKeyboardForm.SetInputFont;
 begin
-  Canvas.Font.Name := '맑은 고딕';
+  // 영문 정식 이름 사용 — 지역화 이름('맑은 고딕')은 비한국어 Windows 에서 매칭 실패 가능
+  Canvas.Font.Name := 'Malgun Gothic';
   Canvas.Font.Height := -ScaleMin(24);
   Canvas.Font.Style := [];
 end;
