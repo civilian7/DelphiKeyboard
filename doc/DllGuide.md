@@ -45,7 +45,7 @@ int __stdcall VKB_Show(
 // 클릭음은 DLL 내부에서 합성하므로 별도 사운드 파일이 필요 없다. (v1.1+)
 void __stdcall VKB_SetClickSound(int enabled);
 
-// DLL 버전. 상위 바이트 = 메이저, 하위 바이트 = 마이너 (0x0103 = v1.3)
+// DLL 버전. 상위 바이트 = 메이저, 하위 바이트 = 마이너 (0x0104 = v1.4)
 int __stdcall VKB_Version(void);
 ```
 
@@ -57,6 +57,9 @@ int __stdcall VKB_Version(void);
 >
 > v1.3 변경: 입력 표시부 폰트를 영문 정식 이름(`Malgun Gothic`)으로 지정하도록 수정 —
 > 비한국어 Windows 에서도 동일하게 렌더링됩니다 (ABI 변경 없음).
+>
+> v1.4 변경: 클릭음 재생을 waveOut 상시 오픈 방식으로 전환 — 빠른 연타 시에도
+> 클릭음이 유실되지 않고 겹쳐 재생됩니다 (ABI 변경 없음).
 
 ## 언어별 예제
 

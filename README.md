@@ -279,6 +279,14 @@ bitness-independent, so there are no IFDEF branches. The DLL import demo
 
 ## Changelog
 
+### 2026-07-11 (v1.4)
+
+- **Click sound reliability fix**: `PlaySound` opens the audio device on every call and purges
+  the previous sound, so clicks were intermittently lost during fast typing; switched to a
+  persistent **waveOut** device (opened once) with a pool of 8 wave headers, so rapid clicks
+  overlap instead of cancelling each other
+- DLLs rebuilt with the fix (`VKB_Version` now returns 1.4; no ABI changes)
+
 ### 2026-07-11 (v1.3)
 
 - **Font matching fix for non-Korean Windows**: the input-display font was specified by its
